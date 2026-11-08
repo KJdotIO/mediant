@@ -25,7 +25,9 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 
 - `apps/web`: Vite and React app. Web MIDI input, computer-key fallback, circle of fifths, grand staff (VexFlow, `vexflow/bravura` bundles the font), 88-key keyboard.
   - `src/notes.ts`: `NoteTracker` holds sounding notes, including notes held by the sustain pedal (CC64). `useMidi` and `useComputerKeys` feed it.
-  - Settings persist in `localStorage` under `mediant.settings`.
+  - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4) and the key.
+  - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
+  - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes.
 - `packages/theory`: the theory engine, `@mediant/theory`. No UI code and no dependencies.
   - `identify(midiNotes, { key })` returns a note, interval, chord or cluster reading.
   - Chord readings carry the symbol, the spelling and degree of each note, a Roman numeral when a key is set, and close alternative readings.

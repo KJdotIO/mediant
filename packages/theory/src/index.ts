@@ -7,5 +7,5 @@ export {
   type NoteReading,
   type Reading,
 } from "./identify.ts";
-export type { Key } from "./key.ts";
+export { scaleNotes, type Key } from "./key.ts";
 export { formatSymbol, noteName, parseNote, pitchClass, type Spelling } from "./notes.ts";

@@ -1,4 +1,4 @@
-import { parseSpelling, spellingPitchClass, spellWithLetter, type Spelling } from "./notes.ts";
+import { parseSpelling, spellingName, spellingPitchClass, spellWithLetter, type Spelling } from "./notes.ts";
 
 export interface Key {
   tonic: string;
@@ -27,3 +27,7 @@ export function keyContext(key: Key): KeyContext {
 
 export const scaleSpelling = (key: KeyContext | undefined, pc: number): Spelling | undefined =>
   key?.scale.find((s) => spellingPitchClass(s) === pc);
+
+/** The seven notes of a key, spelled for that key, with their pitch classes. E major gives G#, not Ab. */
+export const scaleNotes = (key: Key): Array<{ name: string; pitchClass: number }> =>
+  keyContext(key).scale.map((s) => ({ name: spellingName(s), pitchClass: spellingPitchClass(s) }));

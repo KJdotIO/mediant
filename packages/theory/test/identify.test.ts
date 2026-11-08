@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { formatSymbol, identify, parseNote, type IdentifyOptions, type Reading } from "../src/index.ts";
+import { formatSymbol, identify, parseNote, scaleNotes, type IdentifyOptions, type Reading } from "../src/index.ts";
+
+describe("scaleNotes", () => {
+  it.each([
+    ["E", "major", "E F# G# A B C# D#"],
+    ["Db", "major", "Db Eb F Gb Ab Bb C"],
+    ["C#", "minor", "C# D# E F# G# A B"],
+    ["F", "minor", "F G Ab Bb C Db Eb"],
+  ] as const)("spells %s %s as %s", (tonic, mode, names) => {
+    expect(scaleNotes({ tonic, mode }).map((n) => n.name).join(" ")).toBe(names);
+  });
+});
 
 const play = (notes: string, options?: IdentifyOptions): Reading | null =>
   identify(notes.split(" ").map(parseNote), options);

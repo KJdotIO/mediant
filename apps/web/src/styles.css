@@ -99,23 +99,180 @@ p {
 .controls {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
-.toggle {
+.select {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
+  gap: 10px;
+  height: 34px;
+  padding-inline: 14px 10px;
+  border-radius: 10px;
+  background: var(--panel);
   cursor: pointer;
 }
 
-.toggle input {
-  accent-color: var(--root);
-  width: 15px;
-  height: 15px;
+.select select {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239b978f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right center / 10px 6px;
+  border: 0;
+  padding-inline-end: 18px;
+  cursor: pointer;
+}
+
+.select select:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.select option,
+.select optgroup {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding-inline: 10px 14px;
+  background: var(--panel);
+  anchor-name: --settings;
+}
+
+.settings-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.popover {
+  position: fixed;
+  inset: 64px 24px auto auto;
   margin: 0;
+  width: 280px;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.3);
+  transform-origin: top right;
+  opacity: 1;
+  transition-property: opacity, scale, display, overlay;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+@supports (anchor-name: --a) {
+  .popover {
+    position-anchor: --settings;
+    inset: anchor(bottom) anchor(right) auto auto;
+    margin-top: 8px;
+  }
+}
+
+.popover:not(:popover-open) {
+  opacity: 0;
+}
+
+@starting-style {
+  .popover:popover-open {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .popover:not(:popover-open) {
+    scale: 0.97;
+  }
+
+  @starting-style {
+    .popover:popover-open {
+      scale: 0.97;
+    }
+  }
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  padding-inline: 10px 4px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.setting .segmented {
+  background: var(--panel);
+}
+
+label.setting {
+  cursor: pointer;
+}
+
+.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  margin: 0 6px 0 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.switch::before {
+  content: "";
+  position: absolute;
+  inset: 2px auto auto 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.switch:checked {
+  background: var(--root);
+}
+
+.switch:checked::before {
+  translate: 14px 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch::before {
+    transition: translate 150ms var(--ease-out);
+  }
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .segmented {
@@ -152,9 +309,13 @@ p {
 }
 
 @media (hover: hover) {
-  .segmented button:hover,
-  .toggle:hover {
+  .segmented button:hover {
     color: var(--text);
+  }
+
+  .settings-button:hover,
+  .select:hover {
+    background: var(--raised);
   }
 
   .button:hover {
@@ -169,8 +330,7 @@ p {
   }
 }
 
-button:focus-visible,
-.toggle input:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--root);
   outline-offset: 2px;
 }
@@ -241,6 +401,14 @@ button:focus-visible,
 .circle-node.is-tone text,
 .circle-node.is-root text {
   fill: var(--on-light);
+}
+
+.circle-node.is-key circle {
+  stroke: var(--faint);
+}
+
+.circle-node.is-key text {
+  fill: var(--text);
 }
 
 .readout {
@@ -325,6 +493,13 @@ button:focus-visible,
 .tone-name {
   font-size: 15px;
   font-weight: 700;
+}
+
+.tone-count {
+  margin-inline-start: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
 }
 
 .tone-degree {
@@ -537,11 +712,70 @@ button:focus-visible,
 }
 
 @media (max-width: 960px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
   .stage {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .hero {
+    container-type: normal;
+    min-height: 140px;
+    padding: 40px 20px;
+  }
+
+  .circle {
+    display: none;
+  }
+
+  .readout {
+    position: static;
+    font-size: 56px;
+  }
+
+  .side .panel:last-child {
+    min-height: 320px;
+  }
+
   .hint {
     display: none;
+  }
+
+  .deck-row,
+  .deck-group {
+    gap: 12px;
+  }
+
+  .deck .button {
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .app {
+    padding-inline: 16px;
+  }
+
+  .settings-button {
+    padding-inline: 9px;
+  }
+
+  .settings-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .select .label {
+    display: none;
+  }
+
+  .pedal .label {
+    font-size: 10px;
   }
 }

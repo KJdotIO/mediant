@@ -15,11 +15,14 @@ const position = (index: number) => {
 interface Props {
   notes: NoteReading[];
   rootPc: number | undefined;
+  /** Notes of the selected key, spelled for that key. Empty when no key is set. */
+  keyNotes: ReadonlyArray<{ name: string; pitchClass: number }>;
   dim: boolean;
 }
 
-export function Circle({ notes, rootPc, dim }: Props) {
+export function Circle({ notes, rootPc, keyNotes, dim }: Props) {
   const names = new Map(notes.map((n) => [n.pitchClass, n.name.replace(/-?\d+$/, "")]));
+  const inKey = new Map(keyNotes.map((n) => [n.pitchClass, n.name]));
   const lit = FIFTHS.map((pc, i) => ({ pc, i })).filter(({ pc }) => names.has(pc));
   const points = lit.map(({ i }) => position(i));
   const path = points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ") + (points.length > 2 ? " Z" : "");
@@ -40,12 +43,12 @@ export function Circle({ notes, rootPc, dim }: Props) {
       {FIFTHS.map((pc, i) => {
         const { x, y } = position(i);
         const on = names.has(pc);
-        const tone = !on ? "off" : pc === rootPc ? "root" : "tone";
+        const tone = !on ? (inKey.has(pc) ? "key" : "off") : pc === rootPc ? "root" : "tone";
         return (
           <g key={pc} className={`circle-node is-${tone}`} filter={on ? "url(#glow)" : undefined}>
             <circle cx={x} cy={y} r={NODE} />
             <text x={x} y={y} dy="0.35em" textAnchor="middle">
-              {formatSymbol(names.get(pc) ?? DEFAULT_NAMES[pc]!)}
+              {formatSymbol(names.get(pc) ?? inKey.get(pc) ?? DEFAULT_NAMES[pc]!)}
             </text>
           </g>
         );

@@ -1,16 +1,16 @@
-import { formatSymbol, identify, noteName, type NoteReading, type Reading } from "@mediant/theory";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { formatSymbol, identify, scaleNotes, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
+import { heldReading, noteGroups, octaveOf, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
-import { useSettings } from "./settings.ts";
+import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
 import { GrandStaff } from "./Staff.tsx";
 
 const tracker = new NoteTracker();
 const EMPTY: NoteReading[] = [];
+const NO_NOTES: number[] = [];
 if (import.meta.env.DEV) Object.assign(window, { mediantTracker: tracker });
-
-const plain = (name: string) => formatSymbol(name.replace(/-?\d+$/, ""));
 
 function statusText(status: MidiStatus): { text: string; on: boolean } {
   switch (status.state) {
@@ -45,60 +45,137 @@ function title(reading: Reading | null): string {
 
 const symbolScale = (text: string) => (text.length <= 4 ? 1 : text.length <= 7 ? 0.74 : text.length <= 10 ? 0.56 : 0.44);
 
+interface SegmentedProps<T extends string> {
+  label: string;
+  value: T;
+  options: ReadonlyArray<readonly [T, string]>;
+  onChange: (value: T) => void;
+}
+
+function Segmented<T extends string>({ label, value, options, onChange }: SegmentedProps<T>) {
+  return (
+    <div className="segmented" role="radiogroup" aria-label={label}>
+      {options.map(([option, text]) => (
+        <button key={option} type="button" role="radio" aria-checked={value === option} onClick={() => onChange(option)}>
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function App() {
-  const { notes, pedal } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
+  const { notes, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
   const midi = useMidi(tracker);
   const octave = useComputerKeys(tracker);
   const [settings, update] = useSettings();
+  const key = parseKey(settings.key);
+  const options = useMemo<IdentifyOptions>(() => (key ? { key } : {}), [key?.tonic, key?.mode]);
+  const keyNotes = useMemo(() => (options.key ? scaleNotes(options.key) : []), [options]);
 
-  const live = useMemo(() => identify(notes), [notes]);
-  const [last, setLast] = useState<Reading | null>(null);
+  const live = useMemo(() => identify(notes, options), [notes, options]);
+  const history = useRef<Sample[]>([]);
+  const [heldNotes, setHeldNotes] = useState<number[]>(NO_NOTES);
   useEffect(() => {
-    if (live) setLast(live);
+    if (live) {
+      history.current.push({ at: performance.now(), reading: live });
+      if (history.current.length > 32) history.current.shift();
+    } else if (history.current.length) {
+      setHeldNotes(heldReading(history.current, performance.now())?.notes.map((n) => n.midi) ?? NO_NOTES);
+      history.current = [];
+    }
   }, [live]);
+  useEffect(() => {
+    setHeldNotes(NO_NOTES);
+    history.current = [];
+  }, [clears]);
+  const held = useMemo(() => (settings.holdLastChord ? identify(heldNotes, options) : null), [heldNotes, options, settings.holdLastChord]);
 
-  const reading = live ?? (settings.holdLastChord ? last : null);
+  const reading = live ?? held;
   const dim = !live && reading !== null;
   const readingNotes = reading?.notes ?? EMPTY;
   const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
   const heading = title(reading);
   const status = statusText(midi);
   const alternatives = reading?.kind === "chord" ? reading.alternatives.map((a) => formatSymbol(a.symbol)) : [];
-  const count = readingNotes.length;
+  const groups = noteGroups(readingNotes);
+
+  const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    const id = setTimeout(() => setAnnouncement(heading), 500);
+    return () => clearTimeout(id);
+  }, [heading]);
 
   return (
     <div className="app">
       <header className="bar reveal">
         <span className="wordmark">Mediant</span>
-        <div className="controls" aria-label="Settings">
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={settings.holdLastChord}
-              onChange={(e) => update({ holdLastChord: e.target.checked })}
-            />
-            <span>Hold last chord</span>
+        <div className="controls">
+          <label className="select">
+            <span className="label">Key</span>
+            <select value={settings.key} onChange={(e) => update({ key: e.target.value })}>
+              <option value="">None</option>
+              <optgroup label="Major">
+                {KEY_OPTIONS.major.map((value) => (
+                  <option key={value} value={value}>
+                    {formatSymbol(value)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Minor">
+                {KEY_OPTIONS.minor.map((value) => (
+                  <option key={value} value={value}>
+                    {formatSymbol(value)}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           </label>
-          <div className="segmented" role="radiogroup" aria-label="Key labels">
-            {(["intervals", "notes"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={settings.keyLabels === value}
-                onClick={() => update({ keyLabels: value })}
-              >
-                {value === "intervals" ? "Intervals" : "Note names"}
-              </button>
-            ))}
+          <button type="button" className="button settings-button" popoverTarget="settings">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" />
+              <circle cx="10.5" cy="4.5" r="1.5" />
+              <circle cx="5.5" cy="11.5" r="1.5" />
+            </svg>
+            <span className="settings-text">Settings</span>
+          </button>
+          <div id="settings" popover="auto" className="popover" aria-label="Settings">
+            <label className="setting">
+              <span>Hold last chord</span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={settings.holdLastChord}
+                onChange={(e) => update({ holdLastChord: e.target.checked })}
+              />
+            </label>
+            <div className="setting">
+              <span>Key labels</span>
+              <Segmented
+                label="Key labels"
+                value={settings.keyLabels}
+                options={[["intervals", "Intervals"], ["notes", "Notes"]]}
+                onChange={(keyLabels) => update({ keyLabels })}
+              />
+            </div>
+            <div className="setting">
+              <span>Middle C</span>
+              <Segmented
+                label="Middle C"
+                value={settings.middleC}
+                options={[["C3", "C3"], ["C4", "C4"]]}
+                onChange={(middleC) => update({ middleC })}
+              />
+            </div>
           </div>
         </div>
       </header>
 
       <main className="stage">
         <section className="panel hero reveal" aria-label="Circle of fifths">
-          <Circle notes={readingNotes} rootPc={rootPc} dim={dim} />
-          <div className={`readout${dim ? " is-dim" : ""}`} aria-live="polite" aria-atomic="true">
+          <Circle notes={readingNotes} rootPc={rootPc} keyNotes={keyNotes} dim={dim} />
+          <div className={`readout${dim ? " is-dim" : ""}`}>
             {heading ? (
               <h1 className="symbol" style={{ fontSize: `${symbolScale(heading)}em` }}>
                 {heading}
@@ -107,22 +184,26 @@ export function App() {
               <p className="placeholder">Play something</p>
             )}
           </div>
+          <p className="sr-only" aria-live="polite">
+            {announcement}
+          </p>
         </section>
 
         <div className="side reveal">
           <section className={`panel chord${dim ? " is-dim" : ""}`} aria-label="Chord details">
             <div className="panel-head">
               <h2 className="label">Notes</h2>
-              <span className="count">
-                <span className="count-value">{count}</span>
-              </span>
+              <span className="count-value">{readingNotes.length}</span>
             </div>
             <div className="tones">
-              {count ? (
-                readingNotes.map((n) => (
-                  <div key={n.midi} className={`tone${n.pitchClass === rootPc ? " is-root" : ""}`}>
-                    <span className="tone-name">{plain(n.name)}</span>
-                    <span className="tone-degree">{n.degree ? formatSymbol(n.degree) : "\u00a0"}</span>
+              {groups.length ? (
+                groups.map((g) => (
+                  <div key={g.id} className={`tone${g.pitchClass === rootPc ? " is-root" : ""}`}>
+                    <span className="tone-name">
+                      {formatSymbol(g.name)}
+                      {g.count > 1 && <span className="tone-count">×{g.count}</span>}
+                    </span>
+                    <span className="tone-degree">{g.degree ? formatSymbol(g.degree) : "\u00a0"}</span>
                   </div>
                 ))
               ) : (
@@ -152,7 +233,7 @@ export function App() {
               <span className="status-text">{status.text}</span>
             </span>
             <span className="hint">
-              Computer keys A to K from {noteName(octave, { letter: 0, accidental: 0 })}, Z and X for octave
+              Computer keys A to K from C{octaveOf(octave, settings.middleC)}, Z and X for octave
             </span>
           </div>
           <div className="deck-group">
@@ -160,12 +241,18 @@ export function App() {
               <span className="dot" aria-hidden="true" />
               <span className="label">Sustain</span>
             </span>
-            <button type="button" className="button" onClick={() => tracker.clear()} title="Esc">
-              Clear notes
+            <button type="button" className="button" onClick={() => tracker.clear()} title="Clear notes (Esc)">
+              Clear
             </button>
           </div>
         </div>
-        <Keyboard notes={readingNotes} rootPc={rootPc} labels={settings.keyLabels} dim={dim} />
+        <Keyboard
+          notes={readingNotes}
+          rootPc={rootPc}
+          labels={settings.keyLabels}
+          middleC={settings.middleC}
+          dim={dim}
+        />
       </footer>
     </div>
   );

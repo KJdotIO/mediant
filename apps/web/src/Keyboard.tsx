@@ -1,4 +1,5 @@
 import { formatSymbol, type NoteReading } from "@mediant/theory";
+import { octaveOf } from "./logic.ts";
 
 const LOWEST = 21;
 const HIGHEST = 108;
@@ -31,11 +32,12 @@ interface Props {
   notes: NoteReading[];
   rootPc: number | undefined;
   labels: "intervals" | "notes";
+  middleC: "C3" | "C4";
   dim: boolean;
 }
 
 /** A full 88-key keyboard, A0 to C8, so nothing moves when you play outside a small range. */
-export function Keyboard({ notes, rootPc, labels, dim }: Props) {
+export function Keyboard({ notes, rootPc, labels, middleC, dim }: Props) {
   const byMidi = new Map(notes.map((n) => [n.midi, n]));
 
   const renderKey = ({ midi, black, x }: Key) => {
@@ -59,7 +61,7 @@ export function Keyboard({ notes, rootPc, labels, dim }: Props) {
         )}
         {!black && midi % 12 === 0 && (
           <text className="key-octave" x={x + WHITE_WIDTH / 2} y={TOP + WHITE_HEIGHT + 15} textAnchor="middle">
-            C{midi / 12 - 1}
+            C{octaveOf(midi, middleC)}
           </text>
         )}
       </g>
