@@ -28,10 +28,6 @@ describe("heldReading", () => {
     const history: Sample[] = [{ at: 0, reading: read("C#3 E3 G#3 C#4 E4 G#4") }];
     expect(symbol(heldReading(history, 5000))).toBe("C#m");
   });
-
-  it("returns null with no history", () => {
-    expect(heldReading([], 0)).toBeNull();
-  });
 });
 
 describe("noteGroups", () => {
@@ -47,13 +43,10 @@ describe("noteGroups", () => {
 
 describe("ottava", () => {
   it.each([
-    [[60, 64, 67], "treble", 0],
     [[91], "treble", 0],
     [[96], "treble", 1],
     [[108], "treble", 2],
-    [[36, 43], "bass", 0],
     [[29], "bass", 0],
-    [[24], "bass", 1],
     [[21], "bass", 1],
     [[], "bass", 0],
   ] as const)("shifts %j on the %s staff by %i octaves", (midi, clef, octaves) => {

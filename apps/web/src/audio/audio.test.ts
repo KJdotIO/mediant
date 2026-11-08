@@ -3,6 +3,9 @@ import felt from "../../public/sounds/felt/manifest.json";
 import grand from "../../public/sounds/grand/manifest.json";
 import upright from "../../public/sounds/upright/manifest.json";
 import { beatAt, clampBpm, tapTempo } from "./metronome.ts";
+import { pickZone, type SoundPack } from "./piano.ts";
+
+const packs = { felt, upright, grand } as Record<string, SoundPack>;
 
 describe("beatAt", () => {
   const booked = [0, 1, 2, 3, 0].map((beat, i) => ({ time: 10 + i * 0.5, beat }));
@@ -15,9 +18,6 @@ describe("beatAt", () => {
     expect([10, 10.49, 10.5, 11.2, 11.6, 12.1].map((t) => beatAt(booked, t))).toEqual([0, 0, 1, 2, 3, 0]);
   });
 });
-import { pickZone, type SoundPack } from "./piano.ts";
-
-const packs = { felt, upright, grand } as Record<string, SoundPack>;
 
 describe("pickZone", () => {
   it("plays a sampled key at its own pitch", () => {
