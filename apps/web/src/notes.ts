@@ -59,7 +59,7 @@ export type MidiStatus =
   | { state: "connecting" }
   | { state: "unsupported" }
   | { state: "blocked" }
-  | { state: "ready"; inputs: string[] };
+  | { state: "ready"; inputs: string[]; active: string | undefined };
 
 /** Connects every MIDI input to the tracker and follows devices as they connect and disconnect. */
 export function useMidi(tracker: NoteTracker): MidiStatus {
@@ -71,6 +71,8 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
     if (!("requestMIDIAccess" in navigator)) return;
     let access: MIDIAccess | undefined;
     let cancelled = false;
+    let active: string | undefined;
+    let names: string[] = [];
 
     const onMessage = (event: MIDIMessageEvent) => {
       const data = event.data;
@@ -78,8 +80,14 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
       const type = data[0]! & 0xf0;
       const a = data[1]!;
       const b = data[2] ?? 0;
-      if (type === 0x90 && b > 0) tracker.noteOn(a);
-      else if (type === 0x80 || type === 0x90) tracker.noteOff(a);
+      if (type === 0x90 && b > 0) {
+        const name = (event.currentTarget as MIDIInput | null)?.name ?? undefined;
+        if (name && name !== active) {
+          active = name;
+          setStatus({ state: "ready", inputs: names, active });
+        }
+        tracker.noteOn(a);
+      } else if (type === 0x80 || type === 0x90) tracker.noteOff(a);
       else if (type === 0xb0 && a === 64) tracker.setPedal(b >= 64);
       else if (type === 0xb0 && (a === 120 || a === 123)) tracker.clear();
     };
@@ -88,7 +96,9 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
       if (!access) return;
       const inputs = [...access.inputs.values()].filter((input) => input.state === "connected");
       for (const input of inputs) input.onmidimessage = onMessage;
-      setStatus({ state: "ready", inputs: inputs.map((input) => input.name ?? "MIDI keyboard") });
+      names = inputs.map((input) => input.name ?? "MIDI keyboard");
+      if (active && !names.includes(active)) active = undefined;
+      setStatus({ state: "ready", inputs: names, active });
     };
 
     navigator

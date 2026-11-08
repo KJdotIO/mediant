@@ -11,7 +11,6 @@
   --muted: #9b978f;
   --faint: #67635d;
   --root: #ff8f3f;
-  --root-glow: rgb(255 143 63 / 0.55);
   --root-fill: rgb(255 143 63 / 0.12);
   --tone: #ede0c4;
   --on-light: #1a140e;
@@ -50,6 +49,7 @@ p {
   padding: 0 24px 24px;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   user-select: none;
   -webkit-user-select: none;
@@ -193,10 +193,6 @@ button:focus-visible,
   overflow: hidden;
   padding: 20px;
   container-type: size;
-  background-color: var(--panel);
-  background-image: radial-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1.4px);
-  background-size: 16px 16px;
-  background-position: center;
 }
 
 .circle {
@@ -286,12 +282,15 @@ button:focus-visible,
 .side {
   display: grid;
   grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-height: 0;
+  min-width: 0;
 }
 
 .side .panel {
   padding: 20px;
+  min-width: 0;
 }
 
 .count-value {
@@ -431,10 +430,12 @@ button:focus-visible,
   background: var(--line-strong);
 }
 
-.status.is-on .dot,
+.status.is-on .dot {
+  background: var(--muted);
+}
+
 .pedal.is-on .dot {
   background: var(--root);
-  box-shadow: 0 0 8px var(--root-glow);
 }
 
 .pedal.is-on .label {

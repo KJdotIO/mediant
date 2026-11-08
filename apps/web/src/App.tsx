@@ -8,6 +8,7 @@ import { GrandStaff } from "./Staff.tsx";
 
 const tracker = new NoteTracker();
 const EMPTY: NoteReading[] = [];
+if (import.meta.env.DEV) Object.assign(window, { mediantTracker: tracker });
 
 const plain = (name: string) => formatSymbol(name.replace(/-?\d+$/, ""));
 
@@ -19,10 +20,12 @@ function statusText(status: MidiStatus): { text: string; on: boolean } {
       return { text: "This browser can't read MIDI. Use Chrome, Edge or Firefox.", on: false };
     case "blocked":
       return { text: "MIDI access is blocked. Allow it in the site settings.", on: false };
-    case "ready":
-      return status.inputs.length
-        ? { text: status.inputs.join(", "), on: true }
-        : { text: "No MIDI keyboard connected", on: false };
+    case "ready": {
+      const count = status.inputs.length;
+      if (!count) return { text: "No MIDI keyboard connected", on: false };
+      const text = status.active ?? (count === 1 ? status.inputs[0]! : `${count} MIDI inputs ready`);
+      return { text, on: true };
+    }
   }
 }
 
