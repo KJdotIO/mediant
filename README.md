@@ -1,4 +1,4 @@
-# Mediant
+<p align="center"><img src="docs/logo.png" alt="Mediant" width="640" /></p>
 
 Plug in a MIDI keyboard and see what you play: the chord name, the notes on a keyboard and staff, and the chord's shape on the circle of fifths.
 
