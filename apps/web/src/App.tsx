@@ -1,11 +1,14 @@
 import { formatSymbol, identify, scaleNotes, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useAudioBlocked } from "./audio/context.ts";
+import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
 import { heldReading, noteGroups, octaveOf, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
 import { GrandStaff } from "./Staff.tsx";
+import { Tempo } from "./Tempo.tsx";
 
 const tracker = new NoteTracker();
 const EMPTY: NoteReading[] = [];
@@ -43,6 +46,15 @@ function title(reading: Reading | null): string {
   }
 }
 
+function soundText(sound: SoundId | "", state: SoundState, blocked: boolean): string | undefined {
+  const name = SOUNDS.find(([id]) => id === sound)?.[1];
+  if (!name) return undefined;
+  if (state.state === "loading") return `Loading ${name}, ${Math.round(state.progress * 100)}%`;
+  if (state.state === "error") return `${name} didn't load. Check your connection and choose it again.`;
+  if (blocked) return "Click anywhere or press a key to turn on sound";
+  return undefined;
+}
+
 const symbolScale = (text: string) => (text.length <= 4 ? 1 : text.length <= 7 ? 0.74 : text.length <= 10 ? 0.56 : 0.44);
 
 interface SegmentedProps<T extends string> {
@@ -69,6 +81,9 @@ export function App() {
   const midi = useMidi(tracker);
   const octave = useComputerKeys(tracker);
   const [settings, update] = useSettings();
+  const sound = usePiano(tracker, settings.sound, settings.volume);
+  const blocked = useAudioBlocked(settings.sound !== "");
+  const soundMessage = soundText(settings.sound, sound, blocked);
   const key = parseKey(settings.key);
   const options = useMemo<IdentifyOptions>(() => (key ? { key } : {}), [key?.tonic, key?.mode]);
   const keyNotes = useMemo(() => (options.key ? scaleNotes(options.key) : []), [options]);
@@ -131,6 +146,23 @@ export function App() {
               </optgroup>
             </select>
           </label>
+          <label className="select">
+            <span className="label">Sound</span>
+            <select value={settings.sound} onChange={(e) => update({ sound: e.target.value as SoundId | "" })}>
+              <option value="">Off</option>
+              {SOUNDS.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Tempo
+            bpm={settings.bpm}
+            beats={settings.beats}
+            volume={settings.clickVolume}
+            onBpm={(bpm) => update({ bpm })}
+          />
           <button type="button" className="button settings-button" popoverTarget="settings">
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" />
@@ -168,6 +200,42 @@ export function App() {
                 onChange={(middleC) => update({ middleC })}
               />
             </div>
+            <div className="setting">
+              <span>Beats per bar</span>
+              <Segmented
+                label="Beats per bar"
+                value={String(settings.beats)}
+                options={[["2", "2"], ["3", "3"], ["4", "4"], ["6", "6"]]}
+                onChange={(beats) => update({ beats: Number(beats) })}
+              />
+            </div>
+            <label className="setting">
+              <span>Piano volume</span>
+              <input
+                type="range"
+                className="slider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={settings.volume}
+                onChange={(e) => update({ volume: Number(e.target.value) })}
+              />
+            </label>
+            <label className="setting">
+              <span>Click volume</span>
+              <input
+                type="range"
+                className="slider"
+                min={0}
+                max={1}
+                step={0.01}
+                value={settings.clickVolume}
+                onChange={(e) => update({ clickVolume: Number(e.target.value) })}
+              />
+            </label>
+            <p className="credits">
+              Felt Piano by Tom Guder, public domain. Upright and Grand from the Versilian Community Sample Library, CC0.
+            </p>
           </div>
         </div>
       </header>
@@ -232,9 +300,13 @@ export function App() {
               <span className="dot" aria-hidden="true" />
               <span className="status-text">{status.text}</span>
             </span>
-            <span className="hint">
-              Computer keys A to K from C{octaveOf(octave, settings.middleC)}, Z and X for octave
-            </span>
+            {soundMessage ? (
+              <span className="hint is-notice">{soundMessage}</span>
+            ) : (
+              <span className="hint">
+                Computer keys A to K from C{octaveOf(octave, settings.middleC)}, Z and X for octave
+              </span>
+            )}
           </div>
           <div className="deck-group">
             <span className={`pedal${pedal ? " is-on" : ""}`}>

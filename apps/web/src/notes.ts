@@ -7,6 +7,12 @@ export interface NoteSnapshot {
   clears: number;
 }
 
+export type NoteEvent =
+  | { type: "on"; note: number; velocity: number }
+  | { type: "off"; note: number }
+  | { type: "pedal"; down: boolean }
+  | { type: "clear" };
+
 /**
  * Tracks which notes sound. A note sounds while its key is down, or after release while the
  * sustain pedal is down. MIDI and the computer keyboard both feed one tracker.
@@ -18,6 +24,7 @@ export class NoteTracker {
   private clears = 0;
   private snapshot: NoteSnapshot = { notes: [], pedal: false, clears: 0 };
   private listeners = new Set<() => void>();
+  private eventListeners = new Set<(event: NoteEvent) => void>();
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -26,15 +33,23 @@ export class NoteTracker {
 
   getSnapshot = () => this.snapshot;
 
-  noteOn(note: number) {
+  /** Receives every note, pedal and clear event as it happens, for sound. */
+  listen(listener: (event: NoteEvent) => void) {
+    this.eventListeners.add(listener);
+    return () => void this.eventListeners.delete(listener);
+  }
+
+  noteOn(note: number, velocity = 96) {
     this.sustained.delete(note);
     this.held.add(note);
+    this.send({ type: "on", note, velocity });
     this.emit();
   }
 
   noteOff(note: number) {
     if (!this.held.delete(note)) return;
     if (this.pedal) this.sustained.add(note);
+    this.send({ type: "off", note });
     this.emit();
   }
 
@@ -42,6 +57,7 @@ export class NoteTracker {
     if (down === this.pedal) return;
     this.pedal = down;
     if (!down) this.sustained.clear();
+    this.send({ type: "pedal", down });
     this.emit();
   }
 
@@ -49,7 +65,12 @@ export class NoteTracker {
     this.held.clear();
     this.sustained.clear();
     this.clears++;
+    this.send({ type: "clear" });
     this.emit();
+  }
+
+  private send(event: NoteEvent) {
+    for (const listener of this.eventListeners) listener(event);
   }
 
   private emit() {
@@ -90,7 +111,7 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
           active = name;
           setStatus({ state: "ready", inputs: names, active });
         }
-        tracker.noteOn(a);
+        tracker.noteOn(a, b);
       } else if (type === 0x80 || type === 0x90) tracker.noteOff(a);
       else if (type === 0xb0 && a === 64) tracker.setPedal(b >= 64);
       else if (type === 0xb0 && (a === 120 || a === 123)) tracker.clear();

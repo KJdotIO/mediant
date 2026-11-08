@@ -1,0 +1,8 @@
+Felt Piano
+
+Samples: Fuchs & Möhr Felt Piano by Tom Guder
+Source: https://www.polyphone.io/en/soundfonts/pianos/683-fuchs-mohr-felt-piano
+Licence: Public domain
+
+Selected, trimmed to 8 seconds with a fade, and encoded to AAC for Mediant.
+Prepared copy used as the download source: https://huggingface.co/datasets/cueharbor/starter-instruments/resolve/main/felt-piano

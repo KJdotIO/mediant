@@ -27,7 +27,16 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `src/notes.ts`: `NoteTracker` holds sounding notes, including notes held by the sustain pedal (CC64). `useMidi` and `useComputerKeys` feed it.
   - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4) and the key.
   - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
-  - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes.
+  - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes, and `window.mediantAudio` exposes the audio context.
+  - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
+  - Ego Lite throttles animation frames to a few per second, so judge the beat lights with the `beatAt` tests, not by eye in that browser.
+
+## Sound packs
+
+- `node scripts/build-sounds.mjs [felt|upright|grand]` rebuilds `apps/web/public/sounds/<id>/`: AAC samples, `manifest.json` and `LICENSE.txt`.
+- Sources are the CC0 and public-domain sets prepared at `huggingface.co/datasets/cueharbor/starter-instruments`. Downloads are cached in `.cache/sounds` (git-ignored).
+- Encoding uses macOS `afconvert` at 96 kbps. AAC priming is trimmed by the browser: decoded samples start within 4 ms.
+- The Homebrew `ffmpeg` on this machine fails to load `libx265`, so the script doesn't use it.
 - `packages/theory`: the theory engine, `@mediant/theory`. No UI code and no dependencies.
   - `identify(midiNotes, { key })` returns a note, interval, chord or cluster reading.
   - Chord readings carry the symbol, the spelling and degree of each note, a Roman numeral when a key is set, and close alternative readings.

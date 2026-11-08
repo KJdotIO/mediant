@@ -1,0 +1,251 @@
+{
+  "id": "upright",
+  "name": "Upright Piano",
+  "description": "Warm, intimate upright.",
+  "license": "CC0 1.0",
+  "credit": "Knight upright piano, Versilian Community Sample Library (VCSL) by Versilian Studios",
+  "url": "https://github.com/sgossner/VCSL",
+  "release": 0.25,
+  "layers": [
+    {
+      "lo": 1,
+      "hi": 64
+    },
+    {
+      "lo": 65,
+      "hi": 127
+    }
+  ],
+  "zones": [
+    {
+      "key": 21,
+      "layer": 0,
+      "file": "21-v1.m4a"
+    },
+    {
+      "key": 25,
+      "layer": 0,
+      "file": "25-v1.m4a"
+    },
+    {
+      "key": 29,
+      "layer": 0,
+      "file": "29-v1.m4a"
+    },
+    {
+      "key": 33,
+      "layer": 0,
+      "file": "33-v1.m4a"
+    },
+    {
+      "key": 37,
+      "layer": 0,
+      "file": "37-v1.m4a"
+    },
+    {
+      "key": 41,
+      "layer": 0,
+      "file": "41-v1.m4a"
+    },
+    {
+      "key": 45,
+      "layer": 0,
+      "file": "45-v1.m4a"
+    },
+    {
+      "key": 49,
+      "layer": 0,
+      "file": "49-v1.m4a"
+    },
+    {
+      "key": 53,
+      "layer": 0,
+      "file": "53-v1.m4a"
+    },
+    {
+      "key": 57,
+      "layer": 0,
+      "file": "57-v1.m4a"
+    },
+    {
+      "key": 61,
+      "layer": 0,
+      "file": "61-v1.m4a"
+    },
+    {
+      "key": 65,
+      "layer": 0,
+      "file": "65-v1.m4a"
+    },
+    {
+      "key": 69,
+      "layer": 0,
+      "file": "69-v1.m4a"
+    },
+    {
+      "key": 73,
+      "layer": 0,
+      "file": "73-v1.m4a"
+    },
+    {
+      "key": 77,
+      "layer": 0,
+      "file": "77-v1.m4a"
+    },
+    {
+      "key": 81,
+      "layer": 0,
+      "file": "81-v1.m4a"
+    },
+    {
+      "key": 85,
+      "layer": 0,
+      "file": "85-v1.m4a"
+    },
+    {
+      "key": 89,
+      "layer": 0,
+      "file": "89-v1.m4a"
+    },
+    {
+      "key": 93,
+      "layer": 0,
+      "file": "93-v1.m4a"
+    },
+    {
+      "key": 97,
+      "layer": 0,
+      "file": "97-v1.m4a"
+    },
+    {
+      "key": 101,
+      "layer": 0,
+      "file": "101-v1.m4a"
+    },
+    {
+      "key": 105,
+      "layer": 0,
+      "file": "105-v1.m4a"
+    },
+    {
+      "key": 108,
+      "layer": 0,
+      "file": "108-v1.m4a"
+    },
+    {
+      "key": 21,
+      "layer": 1,
+      "file": "21-v2.m4a"
+    },
+    {
+      "key": 25,
+      "layer": 1,
+      "file": "25-v2.m4a"
+    },
+    {
+      "key": 29,
+      "layer": 1,
+      "file": "29-v2.m4a"
+    },
+    {
+      "key": 33,
+      "layer": 1,
+      "file": "33-v2.m4a"
+    },
+    {
+      "key": 37,
+      "layer": 1,
+      "file": "37-v2.m4a"
+    },
+    {
+      "key": 41,
+      "layer": 1,
+      "file": "41-v2.m4a"
+    },
+    {
+      "key": 45,
+      "layer": 1,
+      "file": "45-v2.m4a"
+    },
+    {
+      "key": 49,
+      "layer": 1,
+      "file": "49-v2.m4a"
+    },
+    {
+      "key": 53,
+      "layer": 1,
+      "file": "53-v2.m4a"
+    },
+    {
+      "key": 57,
+      "layer": 1,
+      "file": "57-v2.m4a"
+    },
+    {
+      "key": 61,
+      "layer": 1,
+      "file": "61-v2.m4a"
+    },
+    {
+      "key": 65,
+      "layer": 1,
+      "file": "65-v2.m4a"
+    },
+    {
+      "key": 69,
+      "layer": 1,
+      "file": "69-v2.m4a"
+    },
+    {
+      "key": 73,
+      "layer": 1,
+      "file": "73-v2.m4a"
+    },
+    {
+      "key": 77,
+      "layer": 1,
+      "file": "77-v2.m4a"
+    },
+    {
+      "key": 81,
+      "layer": 1,
+      "file": "81-v2.m4a"
+    },
+    {
+      "key": 85,
+      "layer": 1,
+      "file": "85-v2.m4a"
+    },
+    {
+      "key": 89,
+      "layer": 1,
+      "file": "89-v2.m4a"
+    },
+    {
+      "key": 93,
+      "layer": 1,
+      "file": "93-v2.m4a"
+    },
+    {
+      "key": 97,
+      "layer": 1,
+      "file": "97-v2.m4a"
+    },
+    {
+      "key": 101,
+      "layer": 1,
+      "file": "101-v2.m4a"
+    },
+    {
+      "key": 105,
+      "layer": 1,
+      "file": "105-v2.m4a"
+    },
+    {
+      "key": 108,
+      "layer": 1,
+      "file": "108-v2.m4a"
+    }
+  ]
+}

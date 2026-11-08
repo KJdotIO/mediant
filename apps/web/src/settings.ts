@@ -1,15 +1,31 @@
 import type { Key } from "@mediant/theory";
 import { useCallback, useState } from "react";
+import type { SoundId } from "./audio/piano.ts";
 
 export interface Settings {
   holdLastChord: boolean;
   keyLabels: "intervals" | "notes";
   middleC: "C3" | "C4";
   key: string;
+  sound: SoundId | "";
+  volume: number;
+  bpm: number;
+  beats: number;
+  clickVolume: number;
 }
 
 const STORAGE_KEY = "mediant.settings";
-const DEFAULTS: Settings = { holdLastChord: true, keyLabels: "intervals", middleC: "C4", key: "" };
+const DEFAULTS: Settings = {
+  holdLastChord: true,
+  keyLabels: "intervals",
+  middleC: "C4",
+  key: "",
+  sound: "",
+  volume: 0.8,
+  bpm: 100,
+  beats: 4,
+  clickVolume: 0.6,
+};
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const MINOR_TONICS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"];

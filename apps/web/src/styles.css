@@ -160,7 +160,7 @@ p {
   position: fixed;
   inset: 64px 24px auto auto;
   margin: 0;
-  width: 280px;
+  width: 320px;
   padding: 8px;
   border: 1px solid var(--line-strong);
   border-radius: 16px;
@@ -266,6 +266,141 @@ label.setting {
   outline-offset: 2px;
 }
 
+.tempo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.tempo-toggle,
+.tap {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transition-property: scale, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.tempo-toggle {
+  display: grid;
+  place-items: center;
+  width: 30px;
+}
+
+.tempo-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tempo-toggle[aria-pressed="true"] {
+  color: var(--on-light);
+  background: var(--root);
+}
+
+.tap {
+  padding-inline: 10px;
+}
+
+.bpm {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-inline: 6px 4px;
+  cursor: text;
+}
+
+.bpm input {
+  width: 3.2ch;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: end;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.bpm input::-webkit-inner-spin-button,
+.bpm input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.bpm input:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.bpm .label {
+  font-size: 10px;
+}
+
+.beats {
+  display: inline-flex;
+  gap: 4px;
+  padding-inline: 6px 8px;
+}
+
+.beat {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.beats[data-beat="0"] .beat[data-index="0"] {
+  background: var(--root);
+}
+
+.beats[data-beat="1"] .beat[data-index="1"],
+.beats[data-beat="2"] .beat[data-index="2"],
+.beats[data-beat="3"] .beat[data-index="3"],
+.beats[data-beat="4"] .beat[data-index="4"],
+.beats[data-beat="5"] .beat[data-index="5"] {
+  background: var(--tone);
+}
+
+.slider {
+  width: 132px;
+  margin-inline-end: 6px;
+  accent-color: var(--root);
+  cursor: pointer;
+}
+
+.credits {
+  margin: 6px 10px 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-strong);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.hint.is-notice {
+  color: var(--tone);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -309,7 +444,9 @@ label.setting {
 }
 
 @media (hover: hover) {
-  .segmented button:hover {
+  .segmented button:hover,
+  .tap:hover,
+  .tempo-toggle[aria-pressed="false"]:hover {
     color: var(--text);
   }
 
@@ -325,7 +462,9 @@ label.setting {
 
 @media (prefers-reduced-motion: no-preference) {
   .segmented button:not(:disabled):active,
-  .button:not(:disabled):active {
+  .button:not(:disabled):active,
+  .tempo-toggle:active,
+  .tap:active {
     scale: 0.96;
   }
 }
@@ -711,6 +850,19 @@ button:focus-visible {
   }
 }
 
+@media (max-width: 1100px) {
+  .bar {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .controls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 8px;
+  }
+}
+
 @media (max-width: 960px) {
   .app {
     height: auto;
@@ -771,8 +923,28 @@ button:focus-visible {
     clip-path: inset(50%);
   }
 
-  .select .label {
+  .select .label,
+  .tap {
     display: none;
+  }
+
+  .controls {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .select {
+    flex: 1 1 40%;
+    padding-inline: 12px 10px;
+  }
+
+  .select select {
+    flex: 1;
+  }
+
+  .tempo {
+    flex: 1 1 60%;
+    justify-content: space-between;
   }
 
   .pedal .label {

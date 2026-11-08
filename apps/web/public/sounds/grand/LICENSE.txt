@@ -1,0 +1,8 @@
+Grand Piano
+
+Samples: Kawai grand piano, Versilian Community Sample Library (VCSL) by Versilian Studios
+Source: https://github.com/sgossner/VCSL
+Licence: CC0 1.0
+
+Selected, trimmed to 10 seconds with a fade, and encoded to AAC for Mediant.
+Prepared copy used as the download source: https://huggingface.co/datasets/cueharbor/starter-instruments/resolve/main/grand-piano

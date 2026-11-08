@@ -16,6 +16,15 @@ npx -y pnpm@11.5.3 test
 npx -y pnpm@11.5.3 typecheck
 ```
 
+## Sounds
+
+The built-in pianos come from free sample libraries. Each pack in `apps/web/public/sounds` has its own `LICENSE.txt`.
+
+- Felt Piano: Fuchs & Möhr Felt Piano by Tom Guder, public domain.
+- Upright Piano and Grand Piano: Versilian Community Sample Library by Versilian Studios, CC0 1.0.
+
+`scripts/build-sounds.mjs` rebuilds the packs. It needs macOS, because it encodes with `afconvert`.
+
 ## Licence
 
-MIT. See `LICENSE`.
+The code is MIT. See `LICENSE`. The sample packs keep their own licences, listed above.
