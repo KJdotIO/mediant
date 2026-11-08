@@ -24,7 +24,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 ## Layout
 
 - `apps/web`: Vite and React app. Web MIDI input, computer-key fallback, circle of fifths, grand staff (VexFlow, `vexflow/bravura` bundles the font), 88-key keyboard.
-  - `src/notes.ts`: `NoteTracker` holds sounding notes, including notes held by the sustain pedal (CC64). `useMidi` and `useComputerKeys` feed it.
+  - `src/notes.ts`: `NoteTracker` holds sounding notes, including notes held by the sustain pedal (CC64). `useMidi` and `useComputerKeys` feed it. Tested in `src/notes.test.ts`.
   - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4) and the key.
   - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
   - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes, and `window.mediantAudio` exposes the audio context.
@@ -48,6 +48,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 
 - Fixtures in `packages/theory/test/identify.test.ts` are voicings with the name a musician would expect.
 - Add a fixture before you change the scoring. Check that the other fixtures still pass.
+- Add a fixture only when it runs a code path no other fixture covers. The same chord on another root or in another octave adds nothing.
 
 ## UI rules
 
