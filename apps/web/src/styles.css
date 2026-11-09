@@ -586,6 +586,78 @@ label.setting {
   stroke-linejoin: round;
 }
 
+.audio-source {
+  border-top: 1px solid var(--line-strong);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.select.is-compact {
+  height: 30px;
+  max-width: 160px;
+  padding-inline: 10px 8px;
+  background: var(--panel);
+}
+
+.select.is-compact select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.show-inputs {
+  margin: 0 10px 6px;
+  font-size: 12px;
+  background: var(--panel);
+}
+
+.guide {
+  margin: 4px 10px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.guide summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 0;
+}
+
+.guide summary:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.guide ol {
+  margin: 4px 0 8px;
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.guide p {
+  margin: 0;
+}
+
+.guide code {
+  font-size: 11px;
+  color: var(--tone);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.takes-warning {
+  margin: 4px 4px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--record) 16%, var(--raised));
+  color: var(--text);
+  font-size: 13px;
+}
+
 .takes-empty-title {
   margin-bottom: 2px;
   font-weight: 700;

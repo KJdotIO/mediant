@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { audioContext } from "../audio/context.ts";
 import type { SoundId } from "../audio/piano.ts";
 import type { NoteTracker } from "../notes.ts";
 import type { Settings } from "../settings.ts";
 import type { VideoLayout } from "./frame.ts";
 import { useRecorder } from "./recorder.ts";
-import { useTakes } from "./store.ts";
+import { loadAudio, saveAudio, useTakes } from "./store.ts";
 import { chordChanges, type Take } from "./take.ts";
 import { download, exportVideo, midiBlob } from "./video.ts";
 
@@ -19,7 +20,8 @@ const time = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-di
 function takeMeta(take: Take): string {
   const chords = chordChanges(take.events);
   const noun = plural.select(chords) === "one" ? "chord" : "chords";
-  return `${clock(take.duration)}, ${chords} ${noun}, ${time.format(take.createdAt)}`;
+  const sound = take.audio ? `, ${take.audio.source || "recorded sound"}` : "";
+  return `${clock(take.duration)}, ${chords} ${noun}, ${time.format(take.createdAt)}${sound}`;
 }
 
 interface Props {
@@ -35,6 +37,7 @@ export function Recorder({ tracker, settings }: Props) {
   const [note, setNote] = useState("");
   const [lastId, setLastId] = useState<string>();
   const [job, setJob] = useState<Job>();
+  const [audioProblem, setAudioProblem] = useState("");
   const nextNumber = Math.max(0, ...takes.map((t) => t.number)) + 1;
   const recorder = useRecorder(tracker, {
     leadIn: settings.leadIn,
@@ -43,19 +46,35 @@ export function Recorder({ tracker, settings }: Props) {
     beats: settings.beats,
     key: settings.key,
     nextNumber,
-    onTake: (take) => {
+    audioInput: settings.audioInput,
+    audioLabel: settings.audioLabel,
+    onTake: (take, audio) => {
+      if (audio) void saveAudio(take.id, audio);
       add(take);
       setLastId(take.id);
-      setNote(`Take ${take.number} saved, ${clock(take.duration)}`);
+      const missing = settings.audioInput && !audio;
+      setNote(`Take ${take.number} saved, ${clock(take.duration)}${missing ? ", notes only" : ""}`);
+      if (missing) setAudioProblem(`Couldn't record from ${settings.audioLabel || "the chosen input"}. Choose it again in Settings.`);
     },
     onEmpty: () => setNote("No notes played, so no take saved"),
+    onAudioError: () => setAudioProblem(`Couldn't record from ${settings.audioLabel || "the chosen input"}. Choose it again in Settings.`),
   });
   const { state } = recorder;
   const busy = state.state === "counting" || state.state === "recording";
 
+  /** Loads and decodes a take's recorded sound, if it has one. */
+  const recordingOf = async (take: Take): Promise<AudioBuffer | undefined> => {
+    if (!take.audio) return undefined;
+    const blob = await loadAudio(take.id);
+    return blob ? audioContext().decodeAudioData(await blob.arrayBuffer()) : undefined;
+  };
+
+  const playTake = async (take: Take) => recorder.play(take, await recordingOf(take).catch(() => undefined));
+
   const toggle = () => {
     if (busy) return recorder.stop();
     setNote("");
+    setAudioProblem("");
     setLastId(undefined);
     recorder.record();
   };
@@ -64,6 +83,7 @@ export function Recorder({ tracker, settings }: Props) {
     if (lastId) remove(lastId);
     setLastId(undefined);
     setNote("");
+    setAudioProblem("");
     recorder.record();
   };
 
@@ -85,6 +105,7 @@ export function Recorder({ tracker, settings }: Props) {
       const sound: SoundId = settings.sound || "felt";
       const { blob, extension } = await exportVideo(take, layout, {
         sound,
+        recording: await recordingOf(take),
         middleC: settings.middleC,
         mark: settings.videoMark,
         keyLabels: settings.keyLabels,
@@ -102,7 +123,9 @@ export function Recorder({ tracker, settings }: Props) {
       ? `Count-in ${state.beatsLeft}`
       : state.state === "recording"
         ? clock(state.seconds)
-        : state.state === "playing"
+        : state.state === "saving"
+          ? "Saving take"
+          : state.state === "playing"
           ? `Playing ${clock(state.seconds)}`
           : note;
 
@@ -128,8 +151,9 @@ export function Recorder({ tracker, settings }: Props) {
         Takes <span className="takes-count">{takes.length}</span>
       </button>
       <div id="takes" popover="auto" className="popover takes" aria-label="Takes">
+        {audioProblem && <p className="takes-warning">{audioProblem}</p>}
         {takes.length === 0 ? (
-          <div className="takes-empty">
+          <div className="takes-empty" hidden={!!audioProblem}>
             <p className="takes-empty-title">No takes yet</p>
             <p>Press Record or R to record one.</p>
           </div>
@@ -156,7 +180,7 @@ export function Recorder({ tracker, settings }: Props) {
                         type="button"
                         className="button"
                         disabled={busy}
-                        onClick={() => (playing ? recorder.stop() : recorder.play(take))}
+                        onClick={() => (playing ? recorder.stop() : playTake(take))}
                       >
                         {playing ? "Stop" : "Play"}
                       </button>
@@ -190,7 +214,9 @@ export function Recorder({ tracker, settings }: Props) {
             })}
           </ul>
         )}
-        {!settings.sound && takes.length > 0 && <p className="takes-note">Sound is off, so videos use the Felt Piano.</p>}
+        {!settings.sound && takes.some((t) => !t.audio) && (
+          <p className="takes-note">Takes without recorded sound use the Felt Piano in videos, because Sound is off.</p>
+        )}
       </div>
     </div>
   );

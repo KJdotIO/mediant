@@ -27,8 +27,21 @@ export async function renderAudio(take: Take, sound: SoundId): Promise<AudioBuff
   return offline.startRendering();
 }
 
+/** Places a take's recorded sound on the take's timeline, cut to the take's length. */
+export async function placeRecording(take: Take, recording: AudioBuffer): Promise<AudioBuffer> {
+  const offline = new OfflineAudioContext(2, Math.ceil(take.duration * SAMPLE_RATE), SAMPLE_RATE);
+  const source = offline.createBufferSource();
+  source.buffer = recording;
+  source.connect(offline.destination);
+  const offset = take.audio?.offset ?? 0;
+  source.start(Math.max(0, offset), Math.max(0, -offset));
+  return offline.startRendering();
+}
+
 export interface VideoOptions extends FrameOptions {
   sound: SoundId;
+  /** The take's own recorded sound. When present, the video uses it instead of the piano. */
+  recording?: AudioBuffer | undefined;
   onProgress: (fraction: number) => void;
 }
 
@@ -45,7 +58,7 @@ export async function exportVideo(take: Take, layout: VideoLayout, options: Vide
   const renderer = new FrameRenderer(canvas.getContext("2d")!, layout, take, options);
 
   options.onProgress(0);
-  const audio = await renderAudio(take, options.sound);
+  const audio = options.recording ? await placeRecording(take, options.recording) : await renderAudio(take, options.sound);
   options.onProgress(0.05);
 
   const videoCodec = await getFirstEncodableVideoCodec(["avc", "vp9"], { width, height });

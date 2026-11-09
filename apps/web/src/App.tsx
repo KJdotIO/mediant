@@ -7,6 +7,7 @@ import { Keyboard } from "./Keyboard.tsx";
 import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
+import { AudioSource } from "./recording/AudioSource.tsx";
 import { Recorder } from "./recording/Recorder.tsx";
 import { GrandStaff } from "./Staff.tsx";
 import { Tempo } from "./Tempo.tsx";
@@ -270,6 +271,7 @@ export function App() {
                 onChange={(e) => update({ videoMark: e.target.checked })}
               />
             </label>
+            <AudioSource settings={settings} update={update} />
             <p className="credits">
               Pianos by Tom Guder (Felt) and Versilian Studios (Upright and Grand).
             </p>

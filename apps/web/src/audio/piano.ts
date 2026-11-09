@@ -173,6 +173,13 @@ export class Piano {
 }
 
 let piano: Piano | undefined;
+let muted = false;
+
+/** Silences the live piano, for example while a take plays its own recorded sound. */
+export function muteLivePiano(on: boolean) {
+  muted = on;
+  if (on) piano?.handle({ type: "clear" });
+}
 
 export type SoundState = { state: "off" } | { state: "loading"; progress: number } | { state: "ready" } | { state: "error" };
 
@@ -197,7 +204,7 @@ export function usePiano(tracker: NoteTracker, sound: SoundId | "", volume: numb
         setState({ state: "ready" });
       })
       .catch(() => !cancelled && setState({ state: "error" }));
-    const unlisten = tracker.listen((event) => instance.handle(event));
+    const unlisten = tracker.listen((event) => muted || instance.handle(event));
     return () => {
       cancelled = true;
       unlisten();

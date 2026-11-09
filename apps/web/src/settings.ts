@@ -16,6 +16,9 @@ export interface Settings {
   leadIn: number;
   tail: number;
   videoMark: boolean;
+  /** The audio input recorded with each take, such as BlackHole, or "" for notes only. */
+  audioInput: string;
+  audioLabel: string;
 }
 
 const STORAGE_KEY = "mediant.settings";
@@ -32,6 +35,8 @@ const DEFAULTS: Settings = {
   leadIn: 1,
   tail: 2,
   videoMark: true,
+  audioInput: "",
+  audioLabel: "",
 };
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];

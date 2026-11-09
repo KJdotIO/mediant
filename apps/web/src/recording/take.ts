@@ -14,6 +14,16 @@ export interface Take {
   bpm: number | null;
   beats: number;
   key: string;
+  /** Present when the take recorded an audio input. The sound itself is stored separately. */
+  audio?: TakeAudio;
+}
+
+export interface TakeAudio {
+  /** The take time, in seconds, at which the first recorded sample plays, after alignment. */
+  offset: number;
+  /** Whether the delay was measured from the recording, or only estimated. */
+  aligned: boolean;
+  source: string;
 }
 
 export function applyEvent(tracker: NoteTracker, event: NoteEvent) {
@@ -55,7 +65,7 @@ export function trimTake(
   events: readonly TakeEvent[],
   stoppedAt: number,
   { leadIn, tail, aligned }: TrimOptions,
-): { events: TakeEvent[]; duration: number } | null {
+): { events: TakeEvent[]; duration: number; shift: number } | null {
   const firstOn = events.find((e) => e.type === "on")?.t;
   if (firstOn === undefined) return null;
   const shift = aligned ? 0 : Math.max(0, firstOn - leadIn);
@@ -63,6 +73,7 @@ export function trimTake(
   return {
     events: events.map((e) => ({ ...e, t: Math.max(0, e.t - shift) })),
     duration: Math.max(end - shift, firstOn - shift + 0.1),
+    shift,
   };
 }
 
