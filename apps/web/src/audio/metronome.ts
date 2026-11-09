@@ -65,6 +65,19 @@ export class Metronome {
     this.booked = [];
   }
 
+  /**
+   * Starts again from beat 1 and returns when that downbeat reaches your ears, as a
+   * performance.now() time, so a take can start exactly on the bar line.
+   */
+  restart(): number {
+    this.stop();
+    this.start();
+    const stamp = this.ctx.getOutputTimestamp();
+    const contextTime = stamp.contextTime ?? this.ctx.currentTime;
+    const performanceTime = stamp.performanceTime ?? performance.now();
+    return performanceTime + (this.booked[0]!.time - contextTime) * 1000;
+  }
+
   /** The beat sounding now, counted from 0, or undefined when stopped. */
   currentBeat(): number | undefined {
     return this.running ? beatAt(this.booked, this.ctx.currentTime) : undefined;
@@ -97,6 +110,9 @@ export class Metronome {
 }
 
 let metronome: Metronome | undefined;
+
+/** The shared metronome, while it's running. */
+export const runningMetronome = () => (metronome?.running ? metronome : undefined);
 
 /** Runs the shared metronome and keeps its tempo, beats and volume in step with the settings. */
 export function useMetronome(running: boolean, bpm: number, beats: number, volume: number) {

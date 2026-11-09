@@ -29,6 +29,8 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
   - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes, and `window.mediantAudio` exposes the audio context.
   - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
+  - `src/recording/`: takes. `take.ts` holds the pure parts (trim, `TakeCursor`, MIDI writer), tested in `take.test.ts`. `recorder.ts` records and plays takes through the tracker; with the metronome on, it restarts the click, counts in one bar and keeps the take on the bar lines. `store.ts` keeps takes in IndexedDB. `frame.ts` draws video frames on a canvas (16:9 and 9:16), and `video.ts` renders the piano offline and encodes MP4 with Mediabunny.
+  - To check an exported video, sample frames after seeking and wait two animation frames before drawing; reading straight after `seeked` can return a stale frame.
   - Ego Lite throttles animation frames to a few per second, so judge the beat lights with the `beatAt` tests, not by eye in that browser.
 
 ## Sound packs

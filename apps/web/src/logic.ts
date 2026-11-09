@@ -1,4 +1,19 @@
-import type { Degree, NoteReading, Reading } from "@mediant/theory";
+import { formatSymbol, type Degree, type NoteReading, type Reading } from "@mediant/theory";
+
+/** The big text for a reading: the chord symbol, the note, the interval name or "Cluster". */
+export function readingTitle(reading: Reading | null): string {
+  if (!reading) return "";
+  switch (reading.kind) {
+    case "chord":
+      return formatSymbol(reading.symbol);
+    case "note":
+      return formatSymbol(reading.name);
+    case "interval":
+      return reading.name.charAt(0).toUpperCase() + reading.name.slice(1);
+    case "cluster":
+      return "Cluster";
+  }
+}
 
 /** Keys lifted within this many milliseconds of silence count as one release. */
 export const RELEASE_WINDOW = 250;

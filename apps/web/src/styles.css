@@ -14,6 +14,7 @@
   --root-fill: rgb(255 143 63 / 0.12);
   --tone: #ede0c4;
   --on-light: #1a140e;
+  --record: #ff5a4e;
   --radius: 20px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --font: "Archivo Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -399,6 +400,204 @@ label.setting {
 
 .hint.is-notice {
   color: var(--tone);
+}
+
+#settings {
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.slider-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-value .slider {
+  width: 96px;
+  margin: 0;
+}
+
+.slider-value output {
+  width: 4ch;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  margin-inline-end: 6px;
+}
+
+.recorder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.record-status {
+  width: 170px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: end;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.record-status.is-live {
+  color: var(--text);
+}
+
+.retake[hidden] {
+  display: inline-flex;
+  visibility: hidden;
+}
+
+.record {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 96px;
+  justify-content: center;
+}
+
+.record.is-live {
+  background: var(--record);
+  color: #fff;
+}
+
+.record-icon,
+.stop-icon {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--record);
+  border-radius: 50%;
+}
+
+.stop-icon {
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.takes-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  anchor-name: --takes;
+}
+
+.takes-count {
+  min-width: 2ch;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.takes {
+  inset: auto 24px 230px auto;
+  width: 460px;
+  max-height: min(520px, calc(100dvh - 120px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform-origin: bottom right;
+}
+
+@supports (anchor-name: --a) {
+  .takes {
+    position-anchor: --takes;
+    inset: auto anchor(right) anchor(top) auto;
+    margin: 0 0 8px;
+  }
+}
+
+.take-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.take {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 6px 8px 10px;
+  border-radius: 10px;
+}
+
+.take + .take {
+  border-top: 1px solid var(--line-strong);
+}
+
+.take-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.take-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.take-meta,
+.take-job {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.take-job {
+  color: var(--tone);
+}
+
+.take-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.take-actions .button {
+  padding: 5px 9px;
+  font-size: 12px;
+  background: var(--panel);
+}
+
+.take-actions .button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.delete {
+  display: grid;
+  place-items: center;
+}
+
+.delete svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.takes-empty,
+.takes-note {
+  margin: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.takes-note {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-strong);
+  font-size: 11px;
 }
 
 .sr-only {
@@ -899,6 +1098,28 @@ button:focus-visible {
   .deck-row,
   .deck-group {
     gap: 12px;
+  }
+
+  .deck-row {
+    flex-wrap: wrap;
+    height: auto;
+    row-gap: 10px;
+  }
+
+  .deck-row > .deck-group:last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .recorder {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .record-status {
+    flex: 1;
+    width: auto;
+    min-width: 0;
   }
 
   .deck .button {

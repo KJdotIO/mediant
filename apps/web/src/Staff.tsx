@@ -6,6 +6,7 @@ import {
   AnnotationVerticalJustify,
   Formatter,
   Renderer,
+  type RenderContext,
   Stave,
   StaveConnector,
   StaveNote,
@@ -37,7 +38,14 @@ function draw(element: HTMLDivElement, notes: NoteReading[], rootPc: number | un
   svg?.removeAttribute("height");
   svg?.style.removeProperty("width");
   svg?.style.removeProperty("height");
-  const context = renderer.getContext();
+  renderStaff(renderer.getContext(), notes, rootPc);
+}
+
+/** The size of the staff drawing, before any scaling. */
+export const STAFF_SIZE = { width: WIDTH, height: HEIGHT };
+
+/** Draws the grand staff with the chord into any VexFlow context: SVG in the app, canvas in videos. */
+export function renderStaff(context: RenderContext, notes: NoteReading[], rootPc: number | undefined) {
   context.setFillStyle(INK.fillStyle);
   context.setStrokeStyle(INK.strokeStyle);
 

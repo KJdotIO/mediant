@@ -12,11 +12,15 @@ export interface Settings {
   bpm: number;
   beats: number;
   clickVolume: number;
+  /** Seconds of silence kept before the first note and after the last sound of a take. */
+  leadIn: number;
+  tail: number;
+  videoMark: boolean;
 }
 
 const STORAGE_KEY = "mediant.settings";
 const DEFAULTS: Settings = {
-  holdLastChord: true,
+  holdLastChord: false,
   keyLabels: "intervals",
   middleC: "C4",
   key: "",
@@ -25,6 +29,9 @@ const DEFAULTS: Settings = {
   bpm: 100,
   beats: 4,
   clickVolume: 0.6,
+  leadIn: 1,
+  tail: 2,
+  videoMark: true,
 };
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];

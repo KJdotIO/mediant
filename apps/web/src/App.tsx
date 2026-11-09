@@ -4,9 +4,10 @@ import { useAudioBlocked } from "./audio/context.ts";
 import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
-import { heldReading, noteGroups, octaveOf, type Sample } from "./logic.ts";
+import { heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
+import { Recorder } from "./recording/Recorder.tsx";
 import { GrandStaff } from "./Staff.tsx";
 import { Tempo } from "./Tempo.tsx";
 
@@ -29,20 +30,6 @@ function statusText(status: MidiStatus): { text: string; on: boolean } {
       const text = status.active ?? (count === 1 ? status.inputs[0]! : `${count} MIDI inputs ready`);
       return { text, on: true };
     }
-  }
-}
-
-function title(reading: Reading | null): string {
-  if (!reading) return "";
-  switch (reading.kind) {
-    case "chord":
-      return formatSymbol(reading.symbol);
-    case "note":
-      return formatSymbol(reading.name);
-    case "interval":
-      return reading.name.charAt(0).toUpperCase() + reading.name.slice(1);
-    case "cluster":
-      return "Cluster";
   }
 }
 
@@ -110,7 +97,7 @@ export function App() {
   const dim = !live && reading !== null;
   const readingNotes = reading?.notes ?? EMPTY;
   const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
-  const heading = title(reading);
+  const heading = readingTitle(reading);
   const status = statusText(midi);
   const alternatives = reading?.kind === "chord" ? reading.alternatives.map((a) => formatSymbol(a.symbol)) : [];
   const groups = noteGroups(readingNotes);
@@ -233,6 +220,46 @@ export function App() {
                 onChange={(e) => update({ clickVolume: Number(e.target.value) })}
               />
             </label>
+            <label className="setting">
+              <span>Silence before a take</span>
+              <span className="slider-value">
+                <input
+                  type="range"
+                  className="slider"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  value={settings.leadIn}
+                  onChange={(e) => update({ leadIn: Number(e.target.value) })}
+                />
+                <output>{settings.leadIn} s</output>
+              </span>
+            </label>
+            <label className="setting">
+              <span>Silence after a take</span>
+              <span className="slider-value">
+                <input
+                  type="range"
+                  className="slider"
+                  min={0}
+                  max={5}
+                  step={0.5}
+                  value={settings.tail}
+                  onChange={(e) => update({ tail: Number(e.target.value) })}
+                />
+                <output>{settings.tail} s</output>
+              </span>
+            </label>
+            <label className="setting">
+              <span>Mediant mark on videos</span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={settings.videoMark}
+                onChange={(e) => update({ videoMark: e.target.checked })}
+              />
+            </label>
             <p className="credits">
               Felt Piano by Tom Guder, public domain. Upright and Grand from the Versilian Community Sample Library, CC0.
             </p>
@@ -309,6 +336,7 @@ export function App() {
             )}
           </div>
           <div className="deck-group">
+            <Recorder tracker={tracker} settings={settings} />
             <span className={`pedal${pedal ? " is-on" : ""}`}>
               <span className="dot" aria-hidden="true" />
               <span className="label">Sustain</span>
