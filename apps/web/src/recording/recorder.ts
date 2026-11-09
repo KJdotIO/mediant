@@ -58,6 +58,7 @@ async function alignAudio(blob: Blob, events: TakeEvent[], audioStart: number, s
  */
 export function useRecorder(tracker: NoteTracker, options: Options) {
   const [state, setState] = useState<RecorderState>({ state: "idle" });
+  const [inputAnalyser, setInputAnalyser] = useState<AnalyserNode>();
   const latest = useRef(options);
   latest.current = options;
   const session = useRef<{ stop: () => Promise<void> | void } | undefined>(undefined);
@@ -78,6 +79,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
           return undefined;
         })
       : Promise.resolve(undefined);
+    void capture.then((c) => c && setInputAnalyser(c.analyser));
     const metronome = runningMetronome();
     const zero = metronome ? metronome.restart() : now();
     const countInEnds = metronome ? zero + (beats * 60_000) / bpm : zero;
@@ -97,6 +99,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
       stop: async () => {
         clearInterval(timer);
         unlisten();
+        setInputAnalyser(undefined);
         const stoppedAt = (now() - zero) / 1000;
         const { leadIn, tail, key, nextNumber, audioLabel, onTake, onEmpty } = latest.current;
         const recording = await capture;
@@ -171,5 +174,5 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
 
   useEffect(() => () => void session.current?.stop(), []);
 
-  return { state, record, stop: end, play };
+  return { state, record, stop: end, play, inputAnalyser };
 }

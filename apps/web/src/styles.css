@@ -649,6 +649,51 @@ label.setting {
   -webkit-user-select: text;
 }
 
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-end: 6px;
+}
+
+.meter-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+.meter-dot.is-on,
+.meter-dot.is-peak {
+  background: var(--tone);
+}
+
+.meter-dot.is-hot.is-on,
+.meter-dot.is-hot.is-peak {
+  background: var(--root);
+}
+
+.meter.is-idle .meter-dot {
+  opacity: 0.5;
+}
+
+.record-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.record-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.record-status.is-warning {
+  color: var(--record);
+}
+
 .takes-warning {
   margin: 4px 4px 8px;
   padding: 10px 12px;

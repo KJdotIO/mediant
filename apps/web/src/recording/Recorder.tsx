@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Meter } from "../audio/Meter.tsx";
 import { audioContext } from "../audio/context.ts";
 import type { SoundId } from "../audio/piano.ts";
 import type { NoteTracker } from "../notes.ts";
@@ -10,6 +11,9 @@ import { chordChanges, type Take } from "./take.ts";
 import { download, exportVideo, midiBlob } from "./video.ts";
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+
+/** If no sound arrives within this long of the first note, the input is probably not connected. */
+const SILENCE_GRACE_MS = 600;
 
 const LAYOUT_NAMES: Record<VideoLayout, string> = { landscape: "16:9", portrait: "9:16" };
 
@@ -118,8 +122,28 @@ export function Recorder({ tracker, settings }: Props) {
     }
   };
 
+  const { inputAnalyser } = recorder;
+  const heard = useRef(false);
+  const [silent, setSilent] = useState(false);
+  useEffect(() => {
+    heard.current = false;
+    setSilent(false);
+    if (!inputAnalyser) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unlisten = tracker.listen((event) => {
+      if (event.type !== "on" || timer) return;
+      timer = setTimeout(() => setSilent(!heard.current), SILENCE_GRACE_MS);
+    });
+    return () => {
+      unlisten();
+      clearTimeout(timer);
+    };
+  }, [inputAnalyser, tracker]);
+
   const status =
-    state.state === "counting"
+    silent && busy
+      ? `No sound from ${settings.audioLabel || "the input"}`
+      : state.state === "counting"
       ? `Count-in ${state.beatsLeft}`
       : state.state === "recording"
         ? clock(state.seconds)
@@ -131,8 +155,11 @@ export function Recorder({ tracker, settings }: Props) {
 
   return (
     <div className="recorder">
-      <span className={`record-status${busy ? " is-live" : ""}`} aria-live="polite">
-        {status}
+      <span className={`record-status${busy ? " is-live" : ""}${silent && busy ? " is-warning" : ""}`} aria-live="polite">
+        {busy && inputAnalyser && !silent && (
+          <Meter analyser={inputAnalyser} dots={8} label={`${settings.audioLabel} level`} onSignal={() => (heard.current = true)} />
+        )}
+        <span className="record-status-text">{status}</span>
       </span>
       <button
         type="button"

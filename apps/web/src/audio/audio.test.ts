@@ -2,7 +2,19 @@ import { describe, expect, it } from "vitest";
 import felt from "../../public/sounds/felt/manifest.json";
 import grand from "../../public/sounds/grand/manifest.json";
 import upright from "../../public/sounds/upright/manifest.json";
+import { litDots, levelDb } from "./Meter.tsx";
 import { beatAt, clampBpm, tapTempo } from "./metronome.ts";
+
+describe("level meter", () => {
+  it("measures a full-scale square wave at 0 dB and silence at the floor", () => {
+    expect(levelDb(new Float32Array([1, -1, 1, -1]))).toBeCloseTo(0);
+    expect(levelDb(new Float32Array(64))).toBe(-60);
+  });
+
+  it("lights more dots as the level rises", () => {
+    expect([-60, -30, -6, 0].map((db) => litDots(db, 12))).toEqual([0, 6, 11, 12]);
+  });
+});
 import { pickZone, type SoundPack } from "./piano.ts";
 
 const packs = { felt, upright, grand } as Record<string, SoundPack>;
