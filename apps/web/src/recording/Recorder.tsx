@@ -5,6 +5,7 @@ import type { SoundId } from "../audio/piano.ts";
 import type { NoteTracker } from "../notes.ts";
 import type { Settings } from "../settings.ts";
 import type { VideoLayout } from "./frame.ts";
+import { useInputLevel } from "./audioInput.ts";
 import { useRecorder } from "./recorder.ts";
 import { loadAudio, saveAudio, useTakes } from "./store.ts";
 import { chordChanges, type Take } from "./take.ts";
@@ -123,6 +124,8 @@ export function Recorder({ tracker, settings }: Props) {
   };
 
   const { inputAnalyser } = recorder;
+  const idleLevel = useInputLevel(settings.audioInput, settings.monitorInput && state.state === "idle");
+  const level = busy ? inputAnalyser : idleLevel;
   const heard = useRef(false);
   const [silent, setSilent] = useState(false);
   useEffect(() => {
@@ -156,8 +159,8 @@ export function Recorder({ tracker, settings }: Props) {
   return (
     <div className="recorder">
       <span className={`record-status${busy ? " is-live" : ""}${silent && busy ? " is-warning" : ""}`} aria-live="polite">
-        {busy && inputAnalyser && !silent && (
-          <Meter analyser={inputAnalyser} dots={8} label={`${settings.audioLabel} level`} onSignal={() => (heard.current = true)} />
+        {settings.audioInput && (busy ? !silent : settings.monitorInput) && (
+          <Meter analyser={level} dots={8} label={`${settings.audioLabel} level`} onSignal={() => (heard.current = true)} />
         )}
         <span className="record-status-text">{status}</span>
       </span>

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import { Meter } from "../audio/Meter.tsx";
 import type { Settings } from "../settings.ts";
 import { useAudioInputs, useInputLevel } from "./audioInput.ts";
@@ -6,34 +5,18 @@ import { useAudioInputs, useInputLevel } from "./audioInput.ts";
 interface Props {
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
-}
-
-/** True while the popover around this element is open. */
-function usePopoverOpen(element: HTMLElement | null): boolean {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const popover = element?.closest<HTMLElement>("[popover]");
-    if (!popover) return;
-    const onToggle = (event: Event) => setOpen((event as ToggleEvent).newState === "open");
-    popover.addEventListener("toggle", onToggle);
-    setOpen(popover.matches(":popover-open"));
-    return () => popover.removeEventListener("toggle", onToggle);
-  }, [element]);
-  return open;
+  /** True while the settings panel is open, so the level meter listens. */
+  active: boolean;
 }
 
 /** Picks the audio input that takes record, with setup steps for capturing a DAW on a Mac. */
-export function AudioSource({ settings, update }: Props) {
+export function AudioSource({ settings, update, active }: Props) {
   const { inputs, named, allow } = useAudioInputs();
   const known = inputs.some((input) => input.deviceId === settings.audioInput);
-  const root = useRef<HTMLDivElement>(null);
-  const [element, setElement] = useState<HTMLDivElement | null>(null);
-  useEffect(() => setElement(root.current), []);
-  const open = usePopoverOpen(element);
-  const level = useInputLevel(settings.audioInput, open && known);
+  const level = useInputLevel(settings.audioInput, active && known);
 
   return (
-    <div className="audio-source" ref={root}>
+    <div className="audio-source">
       <label className="setting">
         <span>Record sound from</span>
         <span className="select is-compact">
@@ -64,6 +47,18 @@ export function AudioSource({ settings, update }: Props) {
           <span>Level</span>
           <Meter analyser={level} label={`${settings.audioLabel} level`} />
         </div>
+      )}
+      {settings.audioInput && (
+        <label className="setting">
+          <span>Show level while playing</span>
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={settings.monitorInput}
+            onChange={(e) => update({ monitorInput: e.target.checked })}
+          />
+        </label>
       )}
       {!named && (
         <button type="button" className="button show-inputs" onClick={() => void allow()}>

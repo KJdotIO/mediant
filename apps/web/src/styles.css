@@ -402,10 +402,155 @@ label.setting {
   color: var(--tone);
 }
 
-#settings {
-  max-height: calc(100dvh - 90px);
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0px;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+.shell[data-settings="true"] {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell {
+    transition: grid-template-columns 220ms var(--ease-out);
+  }
+}
+
+.app {
+  width: 100%;
+}
+
+/* Settings live in their own column at the window's right edge. Opening it makes room by
+   shrinking the app, so nothing is covered and everything stays usable. */
+.settings-panel {
+  position: sticky;
+  top: 0;
+  width: 340px;
+  height: 100dvh;
+  padding: 20px 12px 24px;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  background: var(--panel);
+  border-inline-start: 1px solid var(--line);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 150ms ease-out,
+    visibility 0s linear 220ms;
+}
+
+.settings-panel[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 200ms var(--ease-out) 40ms,
+    visibility 0s;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 6px 10px;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  transition-property: scale, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.icon-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+@media (hover: hover) {
+  .icon-button:hover {
+    color: var(--text);
+    background: var(--raised);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .icon-button:active {
+    scale: 0.96;
+  }
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 2px;
+}
+
+.settings-button[aria-expanded="true"] {
+  color: var(--text);
+  background: var(--raised);
+}
+
+.settings-group {
+  padding-top: 10px;
+}
+
+.settings-group + .settings-group {
+  margin-top: 14px;
+}
+
+.settings-group-title {
+  margin: 0;
+  padding: 0 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.settings-panel .credits {
+  margin-top: 20px;
+}
+
+@media (max-width: 960px) {
+  .shell,
+  .shell[data-settings="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 5;
+    width: auto;
+    height: auto;
+    max-height: 82dvh;
+    border-inline-start: 0;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -12px 40px rgb(0 0 0 / 0.5);
+    translate: 0 16px;
+  }
+
+  .settings-panel[data-open="true"] {
+    translate: 0 0;
+  }
 }
 
 .slider-value {
@@ -586,11 +731,6 @@ label.setting {
   stroke-linejoin: round;
 }
 
-.audio-source {
-  border-top: 1px solid var(--line-strong);
-  margin-top: 4px;
-  padding-top: 4px;
-}
 
 .select.is-compact {
   height: 30px;
@@ -1023,6 +1163,25 @@ button:focus-visible {
 
 .deck {
   padding: 16px 20px 12px;
+  container-type: inline-size;
+}
+
+/* The strip above the keyboard narrows when Settings is open: drop the hint first, then shorten
+   the recording status. */
+@container (max-width: 1180px) {
+  .deck .hint {
+    display: none;
+  }
+}
+
+@container (max-width: 980px) {
+  .deck .record-status {
+    width: 120px;
+  }
+
+  .deck .status-text {
+    max-width: 180px;
+  }
 }
 
 .deck-row {

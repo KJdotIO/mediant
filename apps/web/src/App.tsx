@@ -1,5 +1,5 @@
 import { formatSymbol, identify, scaleNotes, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useAudioBlocked } from "./audio/context.ts";
 import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
@@ -7,8 +7,8 @@ import { Keyboard } from "./Keyboard.tsx";
 import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
-import { AudioSource } from "./recording/AudioSource.tsx";
 import { Recorder } from "./recording/Recorder.tsx";
+import { SettingsPanel } from "./SettingsPanel.tsx";
 import { GrandStaff } from "./Staff.tsx";
 import { Tempo } from "./Tempo.tsx";
 
@@ -45,30 +45,18 @@ function soundText(sound: SoundId | "", state: SoundState, blocked: boolean): st
 
 const symbolScale = (text: string) => (text.length <= 4 ? 1 : text.length <= 7 ? 0.74 : text.length <= 10 ? 0.56 : 0.44);
 
-interface SegmentedProps<T extends string> {
-  label: string;
-  value: T;
-  options: ReadonlyArray<readonly [T, string]>;
-  onChange: (value: T) => void;
-}
-
-function Segmented<T extends string>({ label, value, options, onChange }: SegmentedProps<T>) {
-  return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
-      {options.map(([option, text]) => (
-        <button key={option} type="button" role="radio" aria-checked={value === option} onClick={() => onChange(option)}>
-          {text}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export function App() {
   const { notes, held: heldKeys, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
   const midi = useMidi(tracker);
   const octave = useComputerKeys(tracker);
   const [settings, update] = useSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsButton = useRef<HTMLButtonElement>(null);
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    settingsButton.current?.focus({ preventScroll: true });
+  }, []);
   const sound = usePiano(tracker, settings.sound, settings.volume);
   const blocked = useAudioBlocked(settings.sound !== "");
   const soundMessage = soundText(settings.sound, sound, blocked);
@@ -120,6 +108,7 @@ export function App() {
   }, [heading]);
 
   return (
+    <div className="shell" data-settings={settingsOpen}>
     <div className="app">
       <header className="bar reveal">
         <span className="wordmark">Mediant</span>
@@ -161,7 +150,14 @@ export function App() {
             volume={settings.clickVolume}
             onBpm={(bpm) => update({ bpm })}
           />
-          <button type="button" className="button settings-button" popoverTarget="settings">
+          <button
+            type="button"
+            ref={settingsButton}
+            className="button settings-button"
+            aria-expanded={settingsOpen}
+            aria-controls="settings"
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" />
               <circle cx="10.5" cy="4.5" r="1.5" />
@@ -169,113 +165,6 @@ export function App() {
             </svg>
             <span className="settings-text">Settings</span>
           </button>
-          <div id="settings" popover="auto" className="popover" aria-label="Settings">
-            <label className="setting">
-              <span>Hold last chord</span>
-              <input
-                type="checkbox"
-                role="switch"
-                className="switch"
-                checked={settings.holdLastChord}
-                onChange={(e) => update({ holdLastChord: e.target.checked })}
-              />
-            </label>
-            <div className="setting">
-              <span>Key labels</span>
-              <Segmented
-                label="Key labels"
-                value={settings.keyLabels}
-                options={[["intervals", "Intervals"], ["notes", "Notes"]]}
-                onChange={(keyLabels) => update({ keyLabels })}
-              />
-            </div>
-            <div className="setting">
-              <span>Middle C</span>
-              <Segmented
-                label="Middle C"
-                value={settings.middleC}
-                options={[["C3", "C3"], ["C4", "C4"]]}
-                onChange={(middleC) => update({ middleC })}
-              />
-            </div>
-            <div className="setting">
-              <span>Beats per bar</span>
-              <Segmented
-                label="Beats per bar"
-                value={String(settings.beats)}
-                options={[["2", "2"], ["3", "3"], ["4", "4"], ["6", "6"]]}
-                onChange={(beats) => update({ beats: Number(beats) })}
-              />
-            </div>
-            <label className="setting">
-              <span>Piano volume</span>
-              <input
-                type="range"
-                className="slider"
-                min={0}
-                max={1}
-                step={0.01}
-                value={settings.volume}
-                onChange={(e) => update({ volume: Number(e.target.value) })}
-              />
-            </label>
-            <label className="setting">
-              <span>Click volume</span>
-              <input
-                type="range"
-                className="slider"
-                min={0}
-                max={1}
-                step={0.01}
-                value={settings.clickVolume}
-                onChange={(e) => update({ clickVolume: Number(e.target.value) })}
-              />
-            </label>
-            <label className="setting">
-              <span>Silence before a take</span>
-              <span className="slider-value">
-                <input
-                  type="range"
-                  className="slider"
-                  min={0}
-                  max={5}
-                  step={0.5}
-                  value={settings.leadIn}
-                  onChange={(e) => update({ leadIn: Number(e.target.value) })}
-                />
-                <output>{settings.leadIn} s</output>
-              </span>
-            </label>
-            <label className="setting">
-              <span>Silence after a take</span>
-              <span className="slider-value">
-                <input
-                  type="range"
-                  className="slider"
-                  min={0}
-                  max={5}
-                  step={0.5}
-                  value={settings.tail}
-                  onChange={(e) => update({ tail: Number(e.target.value) })}
-                />
-                <output>{settings.tail} s</output>
-              </span>
-            </label>
-            <label className="setting">
-              <span>Mediant logo on videos</span>
-              <input
-                type="checkbox"
-                role="switch"
-                className="switch"
-                checked={settings.videoMark}
-                onChange={(e) => update({ videoMark: e.target.checked })}
-              />
-            </label>
-            <AudioSource settings={settings} update={update} />
-            <p className="credits">
-              Pianos by Tom Guder (Felt) and Versilian Studios (Upright and Grand).
-            </p>
-          </div>
         </div>
       </header>
 
@@ -367,6 +256,13 @@ export function App() {
           dim={dim}
         />
       </footer>
+    </div>
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={closeSettings}
+        settings={settings}
+        update={update}
+      />
     </div>
   );
 }

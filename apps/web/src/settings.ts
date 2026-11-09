@@ -19,6 +19,8 @@ export interface Settings {
   /** The audio input recorded with each take, such as BlackHole, or "" for notes only. */
   audioInput: string;
   audioLabel: string;
+  /** Keep the input's level meter running in the deck. macOS shows the microphone dot meanwhile. */
+  monitorInput: boolean;
 }
 
 const STORAGE_KEY = "mediant.settings";
@@ -37,6 +39,7 @@ const DEFAULTS: Settings = {
   videoMark: true,
   audioInput: "",
   audioLabel: "",
+  monitorInput: true,
 };
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
