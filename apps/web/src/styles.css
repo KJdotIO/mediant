@@ -586,6 +586,16 @@ label.setting {
   stroke-linejoin: round;
 }
 
+.takes-empty-title {
+  margin-bottom: 2px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.takes-empty p {
+  margin: 0;
+}
+
 .takes-empty,
 .takes-note {
   margin: 10px;

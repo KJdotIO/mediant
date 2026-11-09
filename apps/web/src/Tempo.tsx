@@ -78,7 +78,7 @@ export function Tempo({ bpm, beats, volume, onBpm }: Props) {
         />
         <span className="label">BPM</span>
       </label>
-      <button type="button" className="tap" onClick={tap}>
+      <button type="button" className="tap" onClick={tap} title="Tap in time to set the tempo">
         Tap
       </button>
       <span ref={lights} className="beats" aria-hidden="true">

@@ -12,6 +12,16 @@ const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.fl
 
 const LAYOUT_NAMES: Record<VideoLayout, string> = { landscape: "16:9", portrait: "9:16" };
 
+const plural = new Intl.PluralRules("en-GB");
+const time = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+
+/** "0:42, 1 chord, 14:32": length, chord count and the time it was recorded. */
+function takeMeta(take: Take): string {
+  const chords = chordChanges(take.events);
+  const noun = plural.select(chords) === "one" ? "chord" : "chords";
+  return `${clock(take.duration)}, ${chords} ${noun}, ${time.format(take.createdAt)}`;
+}
+
 interface Props {
   tracker: NoteTracker;
   settings: Settings;
@@ -38,7 +48,7 @@ export function Recorder({ tracker, settings }: Props) {
       setLastId(take.id);
       setNote(`Take ${take.number} saved, ${clock(take.duration)}`);
     },
-    onEmpty: () => setNote("Nothing played, so nothing saved"),
+    onEmpty: () => setNote("No notes played, so no take saved"),
   });
   const { state } = recorder;
   const busy = state.state === "counting" || state.state === "recording";
@@ -83,7 +93,7 @@ export function Recorder({ tracker, settings }: Props) {
       download(blob, `mediant-take-${take.number}-${label.replace(":", "x")}.${extension}`);
       setJob(undefined);
     } catch (error) {
-      setJob({ takeId: take.id, error: error instanceof Error ? error.message : "The export failed." });
+      setJob({ takeId: take.id, error: error instanceof Error && error.message ? error.message : "Export failed. Try again." });
     }
   };
 
@@ -119,7 +129,10 @@ export function Recorder({ tracker, settings }: Props) {
       </button>
       <div id="takes" popover="auto" className="popover takes" aria-label="Takes">
         {takes.length === 0 ? (
-          <p className="takes-empty">Takes you record appear here. Press Record or R to start.</p>
+          <div className="takes-empty">
+            <p className="takes-empty-title">No takes yet</p>
+            <p>Press Record or R to record one.</p>
+          </div>
         ) : (
           <ul className="take-list">
             {takes.map((take) => {
@@ -130,8 +143,7 @@ export function Recorder({ tracker, settings }: Props) {
                   <div className="take-info">
                     <span className="take-name">Take {take.number}</span>
                     <span className="take-meta">
-                      {clock(take.duration)}, {chordChanges(take.events)} chords,{" "}
-                      {new Date(take.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {takeMeta(take)}
                     </span>
                   </div>
                   {working ? (
@@ -178,7 +190,7 @@ export function Recorder({ tracker, settings }: Props) {
             })}
           </ul>
         )}
-        <p className="takes-note">Videos use {settings.sound ? "the sound you've picked" : "the Felt Piano"}. Takes stay on this device.</p>
+        {!settings.sound && takes.length > 0 && <p className="takes-note">Sound is off, so videos use the Felt Piano.</p>}
       </div>
     </div>
   );

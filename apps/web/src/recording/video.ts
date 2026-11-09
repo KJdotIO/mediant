@@ -49,7 +49,7 @@ export async function exportVideo(take: Take, layout: VideoLayout, options: Vide
   options.onProgress(0.05);
 
   const videoCodec = await getFirstEncodableVideoCodec(["avc", "vp9"], { width, height });
-  if (!videoCodec) throw new Error("This browser can't encode video.");
+  if (!videoCodec) throw new Error("This browser can't make videos. Try Chrome or Edge.");
   const mp4 = videoCodec === "avc";
   const audioCodec = await getFirstEncodableAudioCodec(mp4 ? ["aac", "opus"] : ["opus"], { numberOfChannels: 2, sampleRate: SAMPLE_RATE });
 

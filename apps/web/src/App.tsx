@@ -19,7 +19,7 @@ if (import.meta.env.DEV) Object.assign(window, { mediantTracker: tracker });
 function statusText(status: MidiStatus): { text: string; on: boolean } {
   switch (status.state) {
     case "connecting":
-      return { text: "Looking for MIDI devices", on: false };
+      return { text: "Looking for MIDI keyboards", on: false };
     case "unsupported":
       return { text: "This browser can't read MIDI. Use Chrome, Edge or Firefox.", on: false };
     case "blocked":
@@ -38,7 +38,7 @@ function soundText(sound: SoundId | "", state: SoundState, blocked: boolean): st
   if (!name) return undefined;
   if (state.state === "loading") return `Loading ${name}, ${Math.round(state.progress * 100)}%`;
   if (state.state === "error") return `${name} didn't load. Check your connection and choose it again.`;
-  if (blocked) return "Click anywhere or press a key to turn on sound";
+  if (blocked) return "Click or press any key to turn on sound";
   return undefined;
 }
 
@@ -261,7 +261,7 @@ export function App() {
               </span>
             </label>
             <label className="setting">
-              <span>Mediant mark on videos</span>
+              <span>Mediant logo on videos</span>
               <input
                 type="checkbox"
                 role="switch"
@@ -271,7 +271,7 @@ export function App() {
               />
             </label>
             <p className="credits">
-              Felt Piano by Tom Guder, public domain. Upright and Grand from the Versilian Community Sample Library, CC0.
+              Pianos by Tom Guder (Felt) and Versilian Studios (Upright and Grand).
             </p>
           </div>
         </div>
@@ -312,7 +312,7 @@ export function App() {
                   </div>
                 ))
               ) : (
-                <p className="empty">Lowest to highest</p>
+                <p className="empty">No notes</p>
               )}
             </div>
             <div className="also">
@@ -341,7 +341,7 @@ export function App() {
               <span className="hint is-notice">{soundMessage}</span>
             ) : (
               <span className="hint">
-                Computer keys A to K from C{octaveOf(octave, settings.middleC)}, Z and X for octave
+                Keys A to K play from C{octaveOf(octave, settings.middleC)}. Z and X change octave.
               </span>
             )}
           </div>
