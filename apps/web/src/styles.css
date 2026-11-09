@@ -991,6 +991,23 @@ button:focus-visible {
   fill: var(--root);
 }
 
+/* Notes the sustain pedal holds after the key came up: a lighter shade of the same colour. */
+.key.is-white.is-tone.is-sustained rect {
+  fill: color-mix(in oklab, var(--tone) 45%, #e8e5df);
+}
+
+.key.is-white.is-root.is-sustained rect {
+  fill: color-mix(in oklab, var(--root) 50%, #e8e5df);
+}
+
+.key.is-black.is-tone.is-sustained rect {
+  fill: color-mix(in oklab, #c9b78f 50%, #0e0e0e);
+}
+
+.key.is-black.is-root.is-sustained rect {
+  fill: color-mix(in oklab, var(--root) 55%, #0e0e0e);
+}
+
 .key-label {
   font-family: var(--font);
   font-size: 11px;

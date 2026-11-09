@@ -1,6 +1,6 @@
 import { formatSymbol, identify, scaleNotes, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
 import { Renderer } from "vexflow/bravura";
-import { heldReading, octaveOf, readingTitle, type Sample } from "../logic.ts";
+import { HOLD_GRACE_MS, heldReading, octaveOf, readingTitle, type Sample } from "../logic.ts";
 import { parseKey } from "../settings.ts";
 import { renderStaff, STAFF_SIZE } from "../Staff.tsx";
 import { TakeCursor, type Take } from "./take.ts";
@@ -66,6 +66,13 @@ const DIM = 0.42;
 
 const withoutOctave = (name: string) => name.replace(/-?\d+$/, "");
 
+/** Mixes two #rrggbb colours: amount 0 gives the first, 1 the second. */
+function mix(from: string, to: string, amount: number): string {
+  const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const parts = [0, 1, 2].map((i) => Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * amount));
+  return `rgb(${parts.join(" ")})`;
+}
+
 /** The keys a video shows: whole octaves around everything played, at least three. */
 export function videoRange(take: Pick<Take, "events">): [number, number] {
   const notes = take.events.flatMap((e) => (e.type === "on" ? [e.note] : []));
@@ -99,6 +106,7 @@ export class FrameRenderer {
   private held: Reading | null = null;
   private staff: { id: string; image: HTMLCanvasElement } | undefined;
   private lastId = "";
+  private silentFrom: number | undefined;
 
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
@@ -131,9 +139,12 @@ export class FrameRenderer {
     }
     if (live) this.held = null;
     this.lastId = id;
+    if (live) this.silentFrom = undefined;
+    else this.silentFrom ??= t;
 
     const reading = live ?? this.held;
-    const dim = !live && !!reading;
+    const dim = !live && !!reading && t - this.silentFrom! >= HOLD_GRACE_MS / 1000;
+    const pressed = live ? new Set(this.cursor.tracker.getSnapshot().held) : undefined;
     const readingNotes = reading?.notes ?? [];
     const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
 
@@ -145,7 +156,7 @@ export class FrameRenderer {
     ctx.globalAlpha = dim ? DIM : 1;
     this.drawCircle(readingNotes, rootPc, readingTitle(reading));
     this.drawStaff(readingNotes, rootPc);
-    this.drawKeys(readingNotes, rootPc);
+    this.drawKeys(readingNotes, rootPc, pressed);
     ctx.globalAlpha = 1;
   }
 
@@ -265,7 +276,7 @@ export class FrameRenderer {
     ctx.drawImage(this.staff.image, box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h);
   }
 
-  private drawKeys(notes: NoteReading[], rootPc: number | undefined) {
+  private drawKeys(notes: NoteReading[], rootPc: number | undefined, pressed: ReadonlySet<number> | undefined) {
     const { ctx } = this;
     const box = this.spec.keys;
     const [low, high] = this.range;
@@ -291,7 +302,10 @@ export class FrameRenderer {
       ctx.beginPath();
       if (black) ctx.roundRect(x, box.y, bw, bh, [0, 0, 4, 4]);
       else ctx.roundRect(x + 1.5, box.y, kw - 3, box.h, [0, 0, 6, 6]);
-      ctx.fillStyle = isRoot ? COLOURS.root : note ? (black ? COLOURS.toneBlack : COLOURS.tone) : black ? COLOURS.black : COLOURS.white;
+      const base = black ? COLOURS.black : COLOURS.white;
+      const lit = isRoot ? COLOURS.root : black ? COLOURS.toneBlack : COLOURS.tone;
+      const sustained = note && pressed && !pressed.has(midi);
+      ctx.fillStyle = !note ? base : sustained ? mix(lit, base, isRoot ? 0.5 : 0.55) : lit;
       ctx.fill();
       if (note) {
         const label = this.options.keyLabels === "intervals" ? (note.degree ?? "") : withoutOctave(note.name);

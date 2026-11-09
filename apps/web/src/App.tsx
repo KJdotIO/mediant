@@ -4,7 +4,7 @@ import { useAudioBlocked } from "./audio/context.ts";
 import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
-import { heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
+import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
 import { Recorder } from "./recording/Recorder.tsx";
@@ -64,7 +64,7 @@ function Segmented<T extends string>({ label, value, options, onChange }: Segmen
 }
 
 export function App() {
-  const { notes, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
+  const { notes, held: heldKeys, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
   const midi = useMidi(tracker);
   const octave = useComputerKeys(tracker);
   const [settings, update] = useSettings();
@@ -91,10 +91,20 @@ export function App() {
     setHeldNotes(NO_NOTES);
     history.current = [];
   }, [clears]);
-  const held = useMemo(() => (settings.holdLastChord ? identify(heldNotes, options) : null), [heldNotes, options, settings.holdLastChord]);
+  const [settled, setSettled] = useState(true);
+  useEffect(() => {
+    if (live) {
+      setSettled(false);
+      return;
+    }
+    const id = setTimeout(() => setSettled(true), HOLD_GRACE_MS);
+    return () => clearTimeout(id);
+  }, [live]);
+  const held = useMemo(() => identify(heldNotes, options), [heldNotes, options]);
 
-  const reading = live ?? held;
-  const dim = !live && reading !== null;
+  const reading = live ?? (!settled || settings.holdLastChord ? held : null);
+  const dim = !live && settled && reading !== null;
+  const pressed = useMemo(() => (live ? new Set(heldKeys) : undefined), [live, heldKeys]);
   const readingNotes = reading?.notes ?? EMPTY;
   const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
   const heading = readingTitle(reading);
@@ -348,6 +358,7 @@ export function App() {
         </div>
         <Keyboard
           notes={readingNotes}
+          pressed={pressed}
           rootPc={rootPc}
           labels={settings.keyLabels}
           middleC={settings.middleC}

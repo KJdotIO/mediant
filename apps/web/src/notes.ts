@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 
 export interface NoteSnapshot {
+  /** Every sounding note: keys down, plus notes the sustain pedal holds. */
   notes: number[];
+  /** Only the keys physically down. */
+  held: number[];
   pedal: boolean;
   /** Goes up by one each time someone clears the notes. */
   clears: number;
@@ -22,7 +25,7 @@ export class NoteTracker {
   private sustained = new Set<number>();
   private pedal = false;
   private clears = 0;
-  private snapshot: NoteSnapshot = { notes: [], pedal: false, clears: 0 };
+  private snapshot: NoteSnapshot = { notes: [], held: [], pedal: false, clears: 0 };
   private listeners = new Set<() => void>();
   private eventListeners = new Set<(event: NoteEvent) => void>();
 
@@ -75,7 +78,8 @@ export class NoteTracker {
 
   private emit() {
     const notes = [...new Set([...this.held, ...this.sustained])].sort((a, b) => a - b);
-    this.snapshot = { notes, pedal: this.pedal, clears: this.clears };
+    const held = [...this.held].sort((a, b) => a - b);
+    this.snapshot = { notes, held, pedal: this.pedal, clears: this.clears };
     for (const listener of this.listeners) listener();
   }
 }

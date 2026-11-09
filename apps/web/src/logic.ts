@@ -18,6 +18,12 @@ export function readingTitle(reading: Reading | null): string {
 /** Keys lifted within this many milliseconds of silence count as one release. */
 export const RELEASE_WINDOW = 250;
 
+/**
+ * A gap shorter than this between chords isn't silence: the last chord stays on screen, at full
+ * strength, until the next one arrives. Without it the display flickers on every chord change.
+ */
+export const HOLD_GRACE_MS = 300;
+
 export interface Sample {
   at: number;
   reading: Reading;

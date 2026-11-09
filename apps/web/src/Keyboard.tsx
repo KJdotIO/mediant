@@ -34,19 +34,22 @@ interface Props {
   labels: "intervals" | "notes";
   middleC: "C3" | "C4";
   dim: boolean;
+  /** Keys physically down. Sounding notes outside this set are held by the pedal. */
+  pressed?: ReadonlySet<number> | undefined;
 }
 
 /** A full 88-key keyboard, A0 to C8, so nothing moves when you play outside a small range. */
-export function Keyboard({ notes, rootPc, labels, middleC, dim }: Props) {
+export function Keyboard({ notes, rootPc, labels, middleC, dim, pressed }: Props) {
   const byMidi = new Map(notes.map((n) => [n.midi, n]));
 
   const renderKey = ({ midi, black, x }: Key) => {
     const note = byMidi.get(midi);
     const tone = !note ? "off" : note.pitchClass === rootPc ? "root" : "tone";
+    const sustained = note && pressed && !pressed.has(midi) ? " is-sustained" : "";
     const width = black ? BLACK_WIDTH : WHITE_WIDTH - GAP;
     const label = note && (labels === "intervals" ? (note.degree ?? "") : note.name.replace(/-?\d+$/, ""));
     return (
-      <g key={midi} className={`key ${black ? "is-black" : "is-white"} is-${tone}`}>
+      <g key={midi} data-midi={midi} className={`key ${black ? "is-black" : "is-white"} is-${tone}${sustained}`}>
         <rect
           x={black ? x : x + GAP / 2}
           y={TOP}

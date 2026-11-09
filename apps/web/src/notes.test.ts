@@ -31,6 +31,17 @@ describe("NoteTracker", () => {
     expect(notes()).toEqual([67]);
   });
 
+  it("tells keys that are down apart from notes the pedal holds", () => {
+    const { tracker } = track();
+    tracker.setPedal(true);
+    tracker.noteOn(60);
+    tracker.noteOn(64);
+    tracker.noteOff(60);
+    tracker.noteOff(64);
+    tracker.noteOn(64);
+    expect(tracker.getSnapshot()).toMatchObject({ notes: [60, 64], held: [64] });
+  });
+
   it("counts a note struck again under the pedal once, and keeps it while the key is down", () => {
     const { tracker, notes } = track();
     tracker.setPedal(true);
