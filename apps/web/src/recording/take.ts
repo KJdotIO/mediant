@@ -6,6 +6,8 @@ export type TakeEvent = NoteEvent & { t: number };
 export interface Take {
   id: string;
   number: number;
+  /** The name you gave the take. Videos show it as their title. */
+  name?: string;
   createdAt: number;
   /** Seconds. */
   duration: number;
@@ -24,6 +26,20 @@ export interface TakeAudio {
   /** Whether the delay was measured from the recording, or only estimated. */
   aligned: boolean;
   source: string;
+}
+
+/** What to call a take: its name, or "Take 4" when it has none. */
+export const takeLabel = (take: Pick<Take, "number" | "name">): string => take.name?.trim() || `Take ${take.number}`;
+
+/** The start of a take's file names: its name in lower case with dashes, or "mediant-take-4". */
+export function fileStem(take: Pick<Take, "number" | "name">): string {
+  const slug = (take.name ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || `mediant-take-${take.number}`;
 }
 
 export function applyEvent(tracker: NoteTracker, event: NoteEvent) {
@@ -123,7 +139,7 @@ const u32 = (n: number) => [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0x
  * Writes the take as a standard MIDI file (type 0). The tempo is the metronome's when the take
  * was recorded against it, so bars line up in a DAW. Otherwise it's 120 BPM.
  */
-export function toMidiFile(take: Pick<Take, "events" | "duration" | "bpm" | "beats" | "number">): Uint8Array {
+export function toMidiFile(take: Pick<Take, "events" | "duration" | "bpm" | "beats" | "number" | "name">): Uint8Array {
   const bpm = take.bpm ?? 120;
   const tick = (t: number) => Math.round((t * PPQ * bpm) / 60);
   const track: number[] = [];
@@ -134,7 +150,7 @@ export function toMidiFile(take: Pick<Take, "events" | "duration" | "bpm" | "bea
     last = Math.max(last, now);
   };
 
-  const name = text(`Mediant take ${take.number}`);
+  const name = text(take.name?.trim() || `Mediant take ${take.number}`);
   put(0, [0xff, 0x03, ...variableLength(name.length), ...name]);
   const microseconds = Math.round(60_000_000 / bpm);
   put(0, [0xff, 0x51, 0x03, (microseconds >> 16) & 0xff, (microseconds >> 8) & 0xff, microseconds & 0xff]);

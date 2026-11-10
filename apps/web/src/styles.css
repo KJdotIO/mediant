@@ -684,8 +684,41 @@ label.setting {
 }
 
 .take-name {
+  width: 100%;
+  min-width: 0;
+  margin: -2px -6px;
+  padding: 2px 6px;
+  font: inherit;
   font-size: 14px;
   font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-overflow: ellipsis;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.take-name::placeholder {
+  color: var(--text);
+  opacity: 1;
+}
+
+.take-name:focus::placeholder {
+  color: var(--faint);
+}
+
+.take-name:focus-visible {
+  background: var(--panel);
+  outline: 2px solid var(--root);
+  outline-offset: -1px;
+}
+
+@media (hover: hover) {
+  .take-name:hover:not(:focus) {
+    background: var(--panel);
+  }
 }
 
 .take-meta,
@@ -694,6 +727,8 @@ label.setting {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .take-job {

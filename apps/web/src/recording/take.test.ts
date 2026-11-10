@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordChanges, TakeCursor, toMidiFile, trimTake, type TakeEvent } from "./take.ts";
+import { chordChanges, fileStem, TakeCursor, takeLabel, toMidiFile, trimTake, type TakeEvent } from "./take.ts";
 
 const on = (t: number, note: number, velocity = 90): TakeEvent => ({ t, type: "on", note, velocity });
 const off = (t: number, note: number): TakeEvent => ({ t, type: "off", note });
@@ -69,6 +69,23 @@ describe("chordChanges", () => {
   });
 });
 
+describe("take names", () => {
+  it("shows the name, or the take number when there is none", () => {
+    expect(takeLabel({ number: 4, name: "Peace Piece" })).toBe("Peace Piece");
+    expect(takeLabel({ number: 4 })).toBe("Take 4");
+    expect(takeLabel({ number: 4, name: "  " })).toBe("Take 4");
+  });
+
+  it.each([
+    ["Peace Piece, take 2", "peace-piece-take-2"],
+    ["Clair de Lune (début)", "clair-de-lune-debut"],
+    ["月の光", "mediant-take-4"],
+    [undefined, "mediant-take-4"],
+  ])("names the files of %s %s", (name, stem) => {
+    expect(fileStem(name === undefined ? { number: 4 } : { number: 4, name })).toBe(stem);
+  });
+});
+
 /** Reads back the parts of a MIDI file the writer produces. */
 function readMidi(bytes: Uint8Array) {
   const view = new DataView(bytes.buffer);
@@ -133,5 +150,11 @@ describe("toMidiFile", () => {
     const open = readMidi(toMidiFile({ ...take, events: [pedal(0, true), on(1, 64)] }));
     const closing = open.events.filter((e) => e.ticks === 6 * open.ppq && e.status < 0xf0).map((e) => e.status);
     expect(closing).toEqual([0x80, 0xb0]);
+  });
+
+  it("names the track after the take", () => {
+    const trackName = (bytes: Uint8Array) => new TextDecoder().decode(new Uint8Array(readMidi(bytes).events.find((e) => e.status === 0xff03)!.data));
+    expect(trackName(toMidiFile(take))).toBe("Mediant take 3");
+    expect(trackName(toMidiFile({ ...take, name: "Peace Piece" }))).toBe("Peace Piece");
   });
 });

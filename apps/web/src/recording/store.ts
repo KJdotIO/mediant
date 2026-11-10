@@ -74,11 +74,16 @@ export function useTakes() {
     void keepStorage();
   }, []);
 
+  const save = useCallback((take: Take) => {
+    setTakes((current) => current.map((t) => (t.id === take.id ? take : t)));
+    void run(TAKES, "readwrite", (store) => store.put(take));
+  }, []);
+
   const remove = useCallback((id: string) => {
     setTakes((current) => current.filter((take) => take.id !== id));
     void run(TAKES, "readwrite", (store) => store.delete(id));
     void run(AUDIO, "readwrite", (store) => store.delete(id));
   }, []);
 
-  return { takes, add, remove };
+  return { takes, add, save, remove };
 }
