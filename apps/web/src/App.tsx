@@ -11,13 +11,15 @@ import { Recorder } from "./recording/Recorder.tsx";
 import { SettingsPanel } from "./SettingsPanel.tsx";
 import { GrandStaff } from "./Staff.tsx";
 import { Tempo } from "./Tempo.tsx";
+import { useWakeLock } from "./wakeLock.ts";
 
 const tracker = new NoteTracker();
 const EMPTY: NoteReading[] = [];
 const NO_NOTES: number[] = [];
+const NO_INPUTS: string[] = [];
 if (import.meta.env.DEV) Object.assign(window, { mediantTracker: tracker });
 
-function statusText(status: MidiStatus): { text: string; on: boolean } {
+function statusText(status: MidiStatus, chosen: string): { text: string; on: boolean } {
   switch (status.state) {
     case "connecting":
       return { text: "Looking for MIDI keyboards", on: false };
@@ -27,6 +29,7 @@ function statusText(status: MidiStatus): { text: string; on: boolean } {
       return { text: "MIDI access is blocked. Allow it in the site settings.", on: false };
     case "ready": {
       const count = status.inputs.length;
+      if (chosen) return status.inputs.includes(chosen) ? { text: chosen, on: true } : { text: `${chosen} isn't connected`, on: false };
       if (!count) return { text: "No MIDI keyboard connected", on: false };
       const text = status.active ?? (count === 1 ? status.inputs[0]! : `${count} MIDI inputs ready`);
       return { text, on: true };
@@ -48,9 +51,10 @@ const symbolScale = (text: string) => (text.length <= 4 ? 1 : text.length <= 7 ?
 
 export function App() {
   const { notes, held: heldKeys, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
-  const midi = useMidi(tracker);
-  const octave = useComputerKeys(tracker);
   const [settings, update] = useSettings();
+  const midi = useMidi(tracker, settings.midiInput);
+  const octave = useComputerKeys(tracker);
+  useWakeLock(tracker);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const closeSettings = useCallback(() => {
@@ -97,7 +101,7 @@ export function App() {
   const readingNotes = reading?.notes ?? EMPTY;
   const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
   const heading = readingTitle(reading);
-  const status = statusText(midi);
+  const status = statusText(midi, settings.midiInput);
   const alternatives = reading?.kind === "chord" ? reading.alternatives.map((a) => formatSymbol(a.symbol)) : [];
   const groups = noteGroups(readingNotes);
 
@@ -262,6 +266,7 @@ export function App() {
         onClose={closeSettings}
         settings={settings}
         update={update}
+        midiInputs={midi.state === "ready" ? midi.inputs : NO_INPUTS}
       />
     </div>
   );

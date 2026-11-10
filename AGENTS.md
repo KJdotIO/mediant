@@ -25,12 +25,17 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 
 - `apps/web`: Vite and React app. Web MIDI input, computer-key fallback, circle of fifths, grand staff (VexFlow, `vexflow/bravura` bundles the font), 88-key keyboard.
   - `src/notes.ts`: `NoteTracker` holds sounding notes, including notes held by the sustain pedal (CC64). `useMidi` and `useComputerKeys` feed it. Tested in `src/notes.test.ts`.
-  - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4) and the key.
+  - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4), the key and the MIDI input.
+  - `useMidi` listens to the MIDI input chosen in **Settings**, or to every input when none is chosen. The picker shows when two or more inputs are connected.
+  - `NoteTracker` passes each listener the time the event happened. MIDI events use the message's own `timeStamp`.
+  - `src/wakeLock.ts` keeps the screen awake for five minutes after the last note.
   - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
   - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes, and `window.mediantAudio` exposes the audio context.
   - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
-  - `src/recording/`: takes. `take.ts` holds the pure parts (trim, `TakeCursor`, MIDI writer), tested in `take.test.ts`. `recorder.ts` records and plays takes through the tracker; with the metronome on, it restarts the click, counts in one bar and keeps the take on the bar lines. `store.ts` keeps takes in IndexedDB. `frame.ts` draws video frames on a canvas (16:9 and 9:16), and `video.ts` renders the piano offline and encodes MP4 with Mediabunny.
+  - `src/recording/`: takes. `take.ts` holds the pure parts (trim, `TakeCursor`, MIDI writer), tested in `take.test.ts`. `recorder.ts` records and plays takes through the tracker; with the metronome on, it restarts the click and counts in one bar, and `trimTake` starts the take on the bar line where you come in. `store.ts` keeps takes in IndexedDB. `frame.ts` draws video frames on a canvas (16:9 and 9:16), and `video.ts` renders the piano offline and encodes MP4 with Mediabunny.
   - Browser tests on localhost share the user's `localStorage` and IndexedDB. Restore any setting a test changes, such as `audioInput`, before finishing.
+  - After a test deletes a take, wait until IndexedDB no longer has it before you reload. A reload straight after the click cancels the delete.
+  - To test MIDI without a keyboard, replace `navigator.requestMIDIAccess` with `Page.addScriptToEvaluateOnNewDocument` before the page loads, and call `onmidimessage` on the fake inputs.
   - To check an exported video, sample frames after seeking and wait two animation frames before drawing; reading straight after `seeked` can return a stale frame.
   - Ego Lite throttles animation frames to a few per second, so judge the beat lights with the `beatAt` tests, not by eye in that browser.
 

@@ -21,6 +21,8 @@ export interface Settings {
   audioLabel: string;
   /** Keep the input's level meter running in the deck. macOS shows the microphone dot meanwhile. */
   monitorInput: boolean;
+  /** The name of the one MIDI input to listen to, or "" for every input. */
+  midiInput: string;
 }
 
 const STORAGE_KEY = "mediant.settings";
@@ -40,6 +42,7 @@ const DEFAULTS: Settings = {
   audioInput: "",
   audioLabel: "",
   monitorInput: true,
+  midiInput: "",
 };
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];

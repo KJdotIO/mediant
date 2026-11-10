@@ -111,7 +111,8 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
         const stoppedAt = (now() - zero) / 1000;
         const { leadIn, tail, key, nextNumber, audioLabel, onTake, onEmpty } = latest.current;
         const recording = await capture;
-        const trimmed = trimTake(events, stoppedAt, { leadIn, tail, aligned: !!metronome });
+        const grid = metronome ? { bar: (beats * 60) / bpm, beat: 60 / bpm } : undefined;
+        const trimmed = trimTake(events, stoppedAt, { leadIn, tail, grid });
         if (!trimmed) {
           await recording?.stop();
           return onEmpty();

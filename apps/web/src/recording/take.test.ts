@@ -32,10 +32,27 @@ describe("trimTake", () => {
     expect(trimTake([on(1, 60)], 4, options)!.duration).toBe(4);
   });
 
-  it("keeps the start on the bar line when recorded against the metronome", () => {
-    const trimmed = trimTake(chord(2, 3, [60]), 10, { ...options, aligned: true })!;
-    expect(trimmed.events[0]!.t).toBe(2);
-    expect(trimmed.duration).toBe(5);
+  describe("against the metronome", () => {
+    const grid = { bar: 2, beat: 0.5 };
+
+    it("cuts the count-in and starts on the bar line where you come in", () => {
+      const trimmed = trimTake(chord(2, 3, [60]), 10, { ...options, grid })!;
+      expect(trimmed.shift).toBe(2);
+      expect(trimmed.events[0]!.t).toBe(0);
+      expect(trimmed.duration).toBe(3);
+    });
+
+    it("counts a note played slightly early as the downbeat", () => {
+      const trimmed = trimTake(chord(3.95, 5, [60]), 10, { ...options, grid })!;
+      expect(trimmed.shift).toBe(4);
+      expect(trimmed.events[0]!.t).toBe(0);
+    });
+
+    it("keeps the bar before the downbeat for a pickup", () => {
+      const trimmed = trimTake(chord(3.5, 5, [60]), 10, { ...options, grid })!;
+      expect(trimmed.shift).toBe(2);
+      expect(trimmed.events[0]!.t).toBe(1.5);
+    });
   });
 });
 
