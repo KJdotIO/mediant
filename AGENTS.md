@@ -44,6 +44,10 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `identify(midiNotes, { key })` returns a note, interval, chord or cluster reading.
   - Chord readings carry the symbol, the spelling and degree of each note, a Roman numeral when a key is set, and close alternative readings.
   - Readings are ranked by penalty in `src/identify.ts`. A root that isn't the bass costs `SLASH_PENALTY`.
+  - Readings with the same penalty are split by the root in the bass, then the plainer chord, then the bass's place in the chord. The pitch never splits a tie, so a shape reads the same in every key.
+  - A bass that is only an extension of the chord above it, and isn't doubled, stays out of the name: F, A and C over G is `F/G`, not `Fadd9/G`.
+  - A slash-chord bass takes its simplest name (`Db7/B`), unless the key spells it another way.
+  - In a key, `keyRoot` in `src/key.ts` spells roots outside the scale: raised for diminished chords (`B#dim7` in C# minor), lowered for borrowed chords (`bII`, `bVI`).
   - Symbols are ASCII (`b`, `#`). `formatSymbol` converts them to ♭ and ♯ for display.
   - Roman numerals use the major scale as the reference in every key, so C in A minor is `bIII`.
 
@@ -52,6 +56,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 - Fixtures in `packages/theory/test/identify.test.ts` are voicings with the name a musician would expect.
 - Add a fixture before you change the scoring. Check that the other fixtures still pass.
 - Add a fixture only when it runs a code path no other fixture covers. The same chord on another root or in another octave adds nothing.
+- `packages/theory/test/properties.test.ts` checks rules that hold for every set of notes, with fast-check: the same reading in all 12 keys, and note names that match the keys pressed.
 
 ## UI rules
 

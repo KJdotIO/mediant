@@ -1,9 +1,10 @@
-import { keyContext, MAJOR_STEPS, scaleSpelling, type Key, type KeyContext } from "./key.ts";
+import { keyContext, keyRoot, MAJOR_STEPS, scaleSpelling, type Key, type KeyContext } from "./key.ts";
 import {
   DEFAULT_SPELLINGS,
   noteName,
   pitchClass,
   spellingName,
+  spellingPitchClass,
   spellWithLetter,
   type Spelling,
 } from "./notes.ts";
@@ -58,9 +59,13 @@ interface Analysis {
   quality: string;
   family: Family;
   penalty: number;
+  /** Splits ties between readings: altered extensions count most, then the highest extension. */
+  complexity: number;
 }
 
 const SLASH_PENALTY = 2.5;
+const NATURAL_PENALTY = 0.5;
+const ALTERED_PENALTY = 1.5;
 const CLUSTER_PENALTY = 6;
 const ALTERNATIVE_PENALTY = 5;
 const ALTERNATIVE_RANGE = 2;
@@ -81,7 +86,7 @@ function analyse(intervals: Set<number>, pitchClassCount: number): Analysis | nu
   const degrees = new Map<number, Degree>([[0, "1"]]);
   if (intervals.size === 2 && has(7)) {
     degrees.set(7, "5");
-    return { degrees, quality: "5", family: "major", penalty: 1 };
+    return { degrees, quality: "5", family: "major", penalty: 1, complexity: 0 };
   }
   if (has(10) && has(11)) return null;
 
@@ -93,16 +98,17 @@ function analyse(intervals: Set<number>, pitchClassCount: number): Analysis | nu
   if (third === "sus4" || third === "sus2") penalty += 2;
   if (third === "none") penalty += 5;
 
+  const lydian = third === "maj" && has(6) && has(11) && !has(7) && !has(8);
   let fifth: "perfect" | "diminished" | "augmented" | "flat" | "none";
   if (has(7)) fifth = "perfect";
   else if (third === "min" && has(6)) fifth = "diminished";
   else if (third === "maj" && has(8)) fifth = "augmented";
-  else if (third === "maj" && has(6)) fifth = "flat";
+  else if (third === "maj" && has(6) && !lydian) fifth = "flat";
   else fifth = "none";
   const fifthTone = { perfect: [7, "5"], diminished: [6, "b5"], augmented: [8, "#5"], flat: [6, "b5"], none: undefined } as const;
   const fifthDegree = fifthTone[fifth];
   if (fifthDegree) degrees.set(fifthDegree[0], fifthDegree[1]);
-  penalty += { perfect: 0, diminished: 0, augmented: 0.5, flat: 1.5, none: pitchClassCount <= 3 ? 2.5 : 1 }[fifth];
+  penalty += { perfect: 0, diminished: 0, augmented: 0.5, flat: 1.5, none: lydian ? 0 : pitchClassCount <= 3 ? 2.5 : 1 }[fifth];
 
   const seventh = has(11) ? "major" : has(10) ? "minor" : fifth === "diminished" && has(9) ? "diminished" : "none";
   const seventhTone = { major: [11, "7"], minor: [10, "b7"], diminished: [9, "bb7"], none: undefined } as const;
@@ -128,7 +134,7 @@ function analyse(intervals: Set<number>, pitchClassCount: number): Analysis | nu
     degrees.set(interval, degree);
     extensions.push(degree);
     if (natural) naturals.push(Number(degree));
-    penalty += natural ? 0.5 : 1.5;
+    penalty += natural ? NATURAL_PENALTY : ALTERED_PENALTY;
   }
   if ([...intervals].some((i) => !degrees.has(i))) return null;
   if (has(1) && has(2)) penalty += 3;
@@ -138,7 +144,8 @@ function analyse(intervals: Set<number>, pitchClassCount: number): Analysis | nu
     seventh === "none"
       ? triadQuality(third, fifth, sixth, extensions)
       : seventhQuality(third, fifth, seventh, naturals, extensions);
-  return { degrees, quality, family, penalty };
+  const complexity = (extensions.length - naturals.length) * 100 + Math.max(sixth ? 6 : 0, ...naturals);
+  return { degrees, quality, family, penalty, complexity };
 }
 
 function triadQuality(third: string, fifth: string, sixth: boolean, extensions: string[]): string {
@@ -185,6 +192,18 @@ const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"] as const;
 
 const plainSpelling = (pc: number, key: KeyContext | undefined): Spelling =>
   scaleSpelling(key, pc) ?? DEFAULT_SPELLINGS.minor[pc]!;
+
+/** How settled each chord tone sounds in the bass: the third, then the fifth, then the seventh. */
+const BASS_RANK: Partial<Record<Degree, number>> = { "3": 0, b3: 0, "5": 1, b5: 1, "#5": 1, "6": 2, bb7: 2, b7: 2, "7": 2 };
+const NATURAL_DEGREES: ReadonlySet<Degree> = new Set(["9", "11", "13"]);
+
+/** The bass of a slash chord, in its simplest name unless the key spells it another way. */
+function bassName(bass: Spelling, key: KeyContext | undefined): string {
+  const name = spellingName(bass);
+  const inKey = key?.scale.some((s) => spellingName(s) === name);
+  const awkward = Math.abs(bass.accidental) > 1 || ["Cb", "B#", "E#", "Fb"].includes(name);
+  return awkward && !inKey ? spellingName(plainSpelling(spellingPitchClass(bass), key)) : name;
+}
 
 const reading = (midi: number, s: Spelling, degree?: Degree): NoteReading => ({
   midi,
@@ -235,40 +254,55 @@ export function identify(midiNotes: readonly number[], options: IdentifyOptions 
     }
   }
 
+  const bassDoubled = midi.filter((m) => pitchClass(m) === bassPc).length > 1;
   const candidates = pitchClasses
     .flatMap((rootPc) => {
-      const analysis = analyse(new Set(pitchClasses.map((pc) => pitchClass(pc - rootPc))), pitchClasses.length);
-      if (!analysis) return [];
-      return [{ rootPc, analysis, penalty: analysis.penalty + (rootPc === bassPc ? 0 : SLASH_PENALTY) }];
+      const intervals = new Set(pitchClasses.map((pc) => pitchClass(pc - rootPc)));
+      const full = analyse(intervals, pitchClasses.length);
+      if (!full) return [];
+      if (rootPc === bassPc) return [{ rootPc, analysis: full, penalty: full.penalty, complexity: full.complexity, bassRank: -1, bassStep: 0 }];
+      const bassStep = pitchClass(bassPc - rootPc);
+      const bassDegree = full.degrees.get(bassStep)!;
+      const bassRank = BASS_RANK[bassDegree] ?? 3;
+      const slash = { rootPc, analysis: full, penalty: full.penalty + SLASH_PENALTY, complexity: full.complexity, bassRank, bassStep };
+      if (bassRank < 3 || bassDoubled || pitchClasses.length < 4) return [slash];
+      intervals.delete(bassStep);
+      const upper = analyse(intervals, pitchClasses.length - 1);
+      const bassPenalty = NATURAL_DEGREES.has(bassDegree) ? NATURAL_PENALTY : ALTERED_PENALTY;
+      if (!upper || upper.penalty + bassPenalty > full.penalty) return [slash];
+      return [{ ...slash, analysis: { ...upper, degrees: full.degrees } }];
     })
     .filter((c) => c.penalty < CLUSTER_PENALTY)
     .sort(
       (a, b) =>
         a.penalty - b.penalty ||
-        Number(b.rootPc === bassPc) - Number(a.rootPc === bassPc) ||
-        a.rootPc - b.rootPc,
+        Number(a.bassRank >= 0) - Number(b.bassRank >= 0) ||
+        a.complexity - b.complexity ||
+        a.bassRank - b.bassRank ||
+        a.bassStep - b.bassStep,
     );
   if (candidates.length === 0) return { kind: "cluster", notes: plain() };
 
   const bestPenalty = candidates[0]!.penalty;
   const chords = candidates.map(({ rootPc, analysis }): ChordReading => {
-    const root = scaleSpelling(key, rootPc) ?? DEFAULT_SPELLINGS[analysis.family][rootPc]!;
+    const inKey = key && keyRoot(key, rootPc, analysis.family);
+    const root = inKey?.root ?? DEFAULT_SPELLINGS[analysis.family][rootPc]!;
     const notes = midi.map((m) => {
       const degree = analysis.degrees.get(pitchClass(m - rootPc))!;
       return reading(m, spellWithLetter(root.letter + DEGREE_LETTER_STEPS[degree], m), degree);
     });
     const rootName = spellingName(root);
-    const bass = notes[0]!.name.replace(/-?\d+$/, "");
+    const bass = rootPc === bassPc ? rootName : bassName(spellWithLetter(root.letter + DEGREE_LETTER_STEPS[notes[0]!.degree!], bassPc), key);
     const chord: ChordReading = {
       kind: "chord",
-      symbol: rootName + analysis.quality + (bass === rootName ? "" : `/${bass}`),
+      symbol: rootName + analysis.quality + (rootPc === bassPc ? "" : `/${bass}`),
       root: rootName,
       bass,
       quality: analysis.quality,
       notes,
       alternatives: [],
     };
-    if (key) chord.roman = romanNumeral(root, rootPc, analysis, key);
+    if (key && inKey) chord.roman = romanNumeral(inKey.degree, rootPc, analysis, key);
     return chord;
   });
 

@@ -96,6 +96,37 @@ describe("inversions and slash chords", () => {
   });
 });
 
+describe("a bass note outside the chord above it", () => {
+  it.each([
+    ["G2 F3 A3 C4", "F/G"],
+    ["F#2 C3 E3 G3", "C/F#"],
+    ["G2 F3 G3 A3 C4", "Fadd9/G"],
+    ["B2 Db3 F3", "Db7/B"],
+  ])("%s is %s", (notes, symbol) => {
+    expect(symbolOf(notes)).toBe(symbol);
+  });
+
+  it("offers the sus chord on the bass as an alternative", () => {
+    const reading = play("G2 F3 A3 C4");
+    expect(reading?.kind === "chord" && reading.alternatives.map((a) => a.symbol)).toContain("G9sus4");
+  });
+
+  it("keeps the bass name the key gives it", () => {
+    expect(symbolOf("F3 F#3 A#3 C#4")).toBe("F#maj7/F");
+    expect(symbolOf("F3 F#3 A#3 C#4", { key: { tonic: "F#", mode: "major" } })).toBe("F#maj7/E#");
+  });
+});
+
+describe("readings that tie", () => {
+  it.each([
+    ["C3 Eb3 F3 G3 Ab3", "Fm9/C"],
+    ["C3 F3 Gb3 Ab3", "Ab13/C"],
+    ["C3 D3 F#3 Ab3", "Ab7b5/C"],
+  ])("%s is %s", (notes, symbol) => {
+    expect(symbolOf(notes)).toBe(symbol);
+  });
+});
+
 describe("ambiguous sets follow the bass", () => {
   it.each([
     ["C4 E4 G4 A4", "C6"],
@@ -128,6 +159,7 @@ describe("spelling", () => {
     ["C4 E4 G4 Bb4 Db5", "C7b9", "C4:1 E4:3 G4:5 Bb4:b7 Db5:b9"],
     ["C4 E4 Gb4 Bb4", "C7b5", "C4:1 E4:3 Gb4:b5 Bb4:b7"],
     ["C4 E4 G4 B4 F#5", "Cmaj7#11", "C4:1 E4:3 G4:5 B4:7 F#5:#11"],
+    ["C3 F#3 B3 E4", "Cmaj7#11", "C3:1 F#3:#11 B3:7 E4:3"],
     ["C4 Eb4 Gb4 A4", "Cdim7", "C4:1 Eb4:b3 Gb4:b5 Bbb4:bb7"],
   ])("%s is %s, spelt %s", (notes, symbol, spelling) => {
     expect(symbolOf(notes)).toBe(symbol);
@@ -175,6 +207,18 @@ describe("Roman numerals", () => {
     ["G#3 B3 D4 F4", "vii°7"],
   ])("in A minor, %s is %s", (notes, numeral) => {
     expect(roman(notes, "A", "minor")).toBe(numeral);
+  });
+
+  it.each([
+    ["B#3 D#4 F#4 A4", "C#", "minor", "B#dim7", "vii°7"],
+    ["G3 Bb3 Db4 E4", "G#", "minor", "Gdim7", "vii°7"],
+    ["F3 A3 C4", "C#", "minor", "F", "III"],
+    ["C#4 E4 G#4", "F", "major", "C#m", "bvi"],
+    ["D3 F#3 A3", "Db", "major", "D", "bII"],
+    ["Eb3 G3 Bb3", "A", "minor", "Eb", "bV"],
+  ] as const)("spells %s in %s %s as %s, %s", (notes, tonic, mode, symbol, numeral) => {
+    expect(symbolOf(notes, { key: { tonic, mode } })).toBe(symbol);
+    expect(roman(notes, tonic, mode)).toBe(numeral);
   });
 
   it("leaves the numeral out when no key is set", () => {
