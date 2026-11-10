@@ -27,7 +27,7 @@ export class NoteTracker {
   private clears = 0;
   private snapshot: NoteSnapshot = { notes: [], held: [], pedal: false, clears: 0 };
   private listeners = new Set<() => void>();
-  private eventListeners = new Set<(event: NoteEvent) => void>();
+  private eventListeners = new Set<(event: NoteEvent, at: number) => void>();
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -36,44 +36,47 @@ export class NoteTracker {
 
   getSnapshot = () => this.snapshot;
 
-  /** Receives every note, pedal and clear event as it happens, for sound. */
-  listen(listener: (event: NoteEvent) => void) {
+  /**
+   * Receives every note, pedal and clear event as it happens, for sound and recording. `at` is
+   * when the event happened, as a performance.now() time: for MIDI, when the message arrived.
+   */
+  listen(listener: (event: NoteEvent, at: number) => void) {
     this.eventListeners.add(listener);
     return () => void this.eventListeners.delete(listener);
   }
 
-  noteOn(note: number, velocity = 96) {
+  noteOn(note: number, velocity = 96, at = performance.now()) {
     this.sustained.delete(note);
     this.held.add(note);
-    this.send({ type: "on", note, velocity });
+    this.send({ type: "on", note, velocity }, at);
     this.emit();
   }
 
-  noteOff(note: number) {
+  noteOff(note: number, at = performance.now()) {
     if (!this.held.delete(note)) return;
     if (this.pedal) this.sustained.add(note);
-    this.send({ type: "off", note });
+    this.send({ type: "off", note }, at);
     this.emit();
   }
 
-  setPedal(down: boolean) {
+  setPedal(down: boolean, at = performance.now()) {
     if (down === this.pedal) return;
     this.pedal = down;
     if (!down) this.sustained.clear();
-    this.send({ type: "pedal", down });
+    this.send({ type: "pedal", down }, at);
     this.emit();
   }
 
-  clear() {
+  clear(at = performance.now()) {
     this.held.clear();
     this.sustained.clear();
     this.clears++;
-    this.send({ type: "clear" });
+    this.send({ type: "clear" }, at);
     this.emit();
   }
 
-  private send(event: NoteEvent) {
-    for (const listener of this.eventListeners) listener(event);
+  private send(event: NoteEvent, at: number) {
+    for (const listener of this.eventListeners) listener(event, at);
   }
 
   private emit() {
@@ -89,6 +92,14 @@ export type MidiStatus =
   | { state: "unsupported" }
   | { state: "blocked" }
   | { state: "ready"; inputs: string[]; active: string | undefined };
+
+/**
+ * When a MIDI message arrived. The browser stamps it on arrival, which is earlier than the
+ * handler runs when the page is busy. A stamp that is missing or out of range is ignored.
+ */
+export function arrivalTime(stamp: number, now: number): number {
+  return stamp > 0 && stamp <= now && now - stamp < 1000 ? stamp : now;
+}
 
 /** Connects every MIDI input to the tracker and follows devices as they connect and disconnect. */
 export function useMidi(tracker: NoteTracker): MidiStatus {
@@ -109,16 +120,17 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
       const type = data[0]! & 0xf0;
       const a = data[1]!;
       const b = data[2] ?? 0;
+      const at = arrivalTime(event.timeStamp, performance.now());
       if (type === 0x90 && b > 0) {
         const name = (event.currentTarget as MIDIInput | null)?.name ?? undefined;
         if (name && name !== active) {
           active = name;
           setStatus({ state: "ready", inputs: names, active });
         }
-        tracker.noteOn(a, b);
-      } else if (type === 0x80 || type === 0x90) tracker.noteOff(a);
-      else if (type === 0xb0 && a === 64) tracker.setPedal(b >= 64);
-      else if (type === 0xb0 && (a === 120 || a === 123)) tracker.clear();
+        tracker.noteOn(a, b, at);
+      } else if (type === 0x80 || type === 0x90) tracker.noteOff(a, at);
+      else if (type === 0xb0 && a === 64) tracker.setPedal(b >= 64, at);
+      else if (type === 0xb0 && (a === 120 || a === 123)) tracker.clear(at);
     };
 
     const connect = () => {

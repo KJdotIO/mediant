@@ -10,6 +10,7 @@ import { applyEvent, trimTake, type Take, type TakeAudio, type TakeEvent } from 
 export type RecorderState =
   | { state: "idle" }
   | { state: "counting"; beatsLeft: number }
+  /** Whole seconds, as the clock shows them. */
   | { state: "recording"; seconds: number }
   | { state: "saving" }
   | { state: "playing"; takeId: string; seconds: number };
@@ -30,6 +31,12 @@ interface Options {
 }
 
 const now = () => performance.now();
+
+/** Whether two states show the same thing, so the clock only redraws when a second passes. */
+function sameState(a: RecorderState, b: RecorderState): boolean {
+  const from: Record<string, unknown> = a;
+  return Object.entries(b).every(([key, value]) => from[key] === value);
+}
 
 /** Mixes a recording to one channel for finding note attacks. */
 function mono(buffer: AudioBuffer): Float32Array {
@@ -62,6 +69,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
   const latest = useRef(options);
   latest.current = options;
   const session = useRef<{ stop: () => Promise<void> | void } | undefined>(undefined);
+  const show = useCallback((next: RecorderState) => setState((current) => (sameState(current, next) ? current : next)), []);
 
   const end = useCallback(async () => {
     const current = session.current;
@@ -84,14 +92,14 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
     const zero = metronome ? metronome.restart() : now();
     const countInEnds = metronome ? zero + (beats * 60_000) / bpm : zero;
     const events: TakeEvent[] = [];
-    const unlisten = tracker.listen((event) => events.push({ ...event, t: Math.max(0, (now() - zero) / 1000) }));
+    const unlisten = tracker.listen((event, at) => events.push({ ...event, t: Math.max(0, (at - zero) / 1000) }));
 
     const timer = setInterval(() => {
       const time = now();
       if (time < countInEnds) {
-        setState({ state: "counting", beatsLeft: Math.min(beats, Math.ceil((countInEnds - time) / (60_000 / bpm))) });
+        show({ state: "counting", beatsLeft: Math.min(beats, Math.ceil((countInEnds - time) / (60_000 / bpm))) });
       } else {
-        setState({ state: "recording", seconds: (time - countInEnds) / 1000 });
+        show({ state: "recording", seconds: Math.floor((time - countInEnds) / 1000) });
       }
     }, 50);
 
@@ -133,7 +141,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
       },
     };
     setState(metronome ? { state: "counting", beatsLeft: beats } : { state: "recording", seconds: 0 });
-  }, [tracker]);
+  }, [tracker, show]);
 
   const play = useCallback(
     (take: Take, sound?: AudioBuffer) => {
@@ -156,7 +164,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
         const t = (now() - start) / 1000;
         while (index < take.events.length && take.events[index]!.t <= t) applyEvent(tracker, take.events[index++]!);
         if (t >= take.duration) return void end();
-        setState({ state: "playing", takeId: take.id, seconds: Math.max(0, t) });
+        show({ state: "playing", takeId: take.id, seconds: Math.max(0, Math.floor(t)) });
         timer = setTimeout(tick, 4);
       };
       session.current = {
@@ -169,7 +177,7 @@ export function useRecorder(tracker: NoteTracker, options: Options) {
       };
       tick();
     },
-    [tracker, end],
+    [tracker, end, show],
   );
 
   useEffect(() => () => void session.current?.stop(), []);

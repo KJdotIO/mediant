@@ -49,6 +49,15 @@ async function run<T>(store: string, mode: IDBTransactionMode, work: (store: IDB
 export const saveAudio = (id: string, blob: Blob) => run(AUDIO, "readwrite", (store) => store.put(blob, id));
 export const loadAudio = (id: string) => run<Blob | undefined>(AUDIO, "readonly", (store) => store.get(id));
 
+/**
+ * Asks the browser to keep this site's storage when disk space runs low. Without it, the
+ * browser can delete saved takes. Asked once there is a take worth keeping.
+ */
+async function keepStorage() {
+  if (!navigator.storage?.persist || (await navigator.storage.persisted())) return;
+  await navigator.storage.persist();
+}
+
 /** Takes saved on this device, newest first. */
 export function useTakes() {
   const [takes, setTakes] = useState<Take[]>([]);
@@ -62,6 +71,7 @@ export function useTakes() {
   const add = useCallback((take: Take) => {
     setTakes((current) => [take, ...current]);
     void run(TAKES, "readwrite", (store) => store.put(take));
+    void keepStorage();
   }, []);
 
   const remove = useCallback((id: string) => {
