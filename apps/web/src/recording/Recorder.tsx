@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Meter } from "../audio/Meter.tsx";
 import { audioContext } from "../audio/context.ts";
-import type { SoundId } from "../audio/piano.ts";
+import { releasePacks, type SoundId } from "../audio/piano.ts";
 import type { NoteTracker } from "../notes.ts";
 import type { Settings } from "../settings.ts";
 import type { VideoLayout } from "./frame.ts";
@@ -9,7 +9,7 @@ import { useInputLevel } from "./audioInput.ts";
 import { useRecorder } from "./recorder.ts";
 import { loadAudio, saveAudio, useTakes } from "./store.ts";
 import { chordChanges, type Take } from "./take.ts";
-import { download, exportVideo, midiBlob } from "./video.ts";
+import { download, midiBlob } from "./files.ts";
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
@@ -108,6 +108,7 @@ export function Recorder({ tracker, settings }: Props) {
     setJob({ takeId: take.id, label, progress: 0 });
     try {
       const sound: SoundId = settings.sound || "felt";
+      const { exportVideo } = await import("./video.ts");
       const { blob, extension } = await exportVideo(take, layout, {
         sound,
         recording: await recordingOf(take),
@@ -120,6 +121,8 @@ export function Recorder({ tracker, settings }: Props) {
       setJob(undefined);
     } catch (error) {
       setJob({ takeId: take.id, error: error instanceof Error && error.message ? error.message : "Export failed. Try again." });
+    } finally {
+      if (!settings.sound) releasePacks();
     }
   };
 

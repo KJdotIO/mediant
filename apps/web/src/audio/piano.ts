@@ -70,6 +70,11 @@ export function loadPack(id: SoundId, onProgress: (fraction: number) => void = (
   return loading;
 }
 
+/** Forgets every decoded pack but one. A decoded piano takes hundreds of megabytes of memory. */
+export function releasePacks(keep?: SoundId) {
+  for (const id of [...packs.keys()]) if (id !== keep) packs.delete(id);
+}
+
 /** Picks the sample zone for a note: the velocity layer, then the nearest sampled key. */
 export function pickZone(pack: SoundPack, note: number, velocity: number) {
   const layer = Math.max(0, pack.layers.findIndex((l) => velocity >= l.lo && velocity <= l.hi));
@@ -190,6 +195,7 @@ export function usePiano(tracker: NoteTracker, sound: SoundId | "", volume: numb
   useEffect(() => {
     if (!sound) {
       piano?.use(undefined);
+      releasePacks();
       setState({ state: "off" });
       return;
     }
@@ -201,6 +207,7 @@ export function usePiano(tracker: NoteTracker, sound: SoundId | "", volume: numb
       .then((loaded) => {
         if (cancelled) return;
         instance.use(loaded);
+        releasePacks(sound);
         setState({ state: "ready" });
       })
       .catch(() => !cancelled && setState({ state: "error" }));

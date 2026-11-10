@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NoteTracker, type NoteEvent } from "./notes.ts";
+import { arrivalTime, NoteTracker, type NoteEvent } from "./notes.ts";
 
 const track = () => {
   const tracker = new NoteTracker();
@@ -79,11 +79,33 @@ describe("NoteTracker", () => {
     ]);
   });
 
+  it("passes on the time each event happened", () => {
+    const tracker = new NoteTracker();
+    const times: number[] = [];
+    tracker.listen((_, at) => times.push(at));
+    tracker.noteOn(60, 90, 1200);
+    tracker.setPedal(true, 1250);
+    tracker.noteOff(60, 1300);
+    tracker.clear(1400);
+    expect(times).toEqual([1200, 1250, 1300, 1400]);
+  });
+
   it("returns the same snapshot until something changes", () => {
     const { tracker } = track();
     const first = tracker.getSnapshot();
     expect(tracker.getSnapshot()).toBe(first);
     tracker.noteOn(60);
     expect(tracker.getSnapshot()).not.toBe(first);
+  });
+});
+
+describe("arrivalTime", () => {
+  it.each([
+    [4990, 5000, 4990],
+    [0, 5000, 5000],
+    [5200, 5000, 5000],
+    [100, 5000, 5000],
+  ])("reads a stamp of %i at %i as %i", (stamp, now, expected) => {
+    expect(arrivalTime(stamp, now)).toBe(expected);
   });
 });

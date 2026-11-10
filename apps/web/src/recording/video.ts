@@ -11,7 +11,7 @@ import {
 } from "mediabunny";
 import { loadPack, Piano, type SoundId } from "../audio/piano.ts";
 import { FrameRenderer, LAYOUTS, type FrameOptions, type VideoLayout } from "./frame.ts";
-import { toMidiFile, type Take } from "./take.ts";
+import type { Take } from "./take.ts";
 
 const FPS = 30;
 const SAMPLE_RATE = 48000;
@@ -86,18 +86,4 @@ export async function exportVideo(take: Take, layout: VideoLayout, options: Vide
   await output.finalize();
   options.onProgress(1);
   return { blob: new Blob([output.target.buffer!], { type: mp4 ? "video/mp4" : "video/webm" }), extension: mp4 ? "mp4" : "webm" };
-}
-
-export function midiBlob(take: Take): Blob {
-  return new Blob([toMidiFile(take).slice().buffer], { type: "audio/midi" });
-}
-
-/** Saves a file through the browser's download. */
-export function download(blob: Blob, name: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

@@ -21,8 +21,21 @@ Pick a key at the top of the page and chords are spelled for that key. Pick a so
 - Interval or note-name labels above every key you press.
 - Sustain pedal support, and a setting that keeps the last chord on screen after you let go.
 - Felt, upright and grand piano sounds, and a metronome with tap tempo.
+- Takes: press **Record** or R, play, and watch the take back. With the metronome on, you get a one-bar count-in.
+- Export a take as a MIDI file, or as a 16:9 or 9:16 video of the circle, staff and keyboard.
 
-Mediant runs in your browser, with no account. Your playing never leaves your computer. Chord names come from fixed music-theory rules, so the same notes always get the same name.
+Mediant runs in your browser, with no account. Your playing never leaves your computer, and takes are saved in the browser you record them in. Chord names come from fixed music-theory rules, so the same notes always get the same name.
+
+## Record your DAW's sound
+
+A take can record the sound of Logic, Ableton or any other app along with your notes, and videos then use that sound. The browser can only record from an audio input, so you route the app's output to one. On a Mac:
+
+1. Install [BlackHole](https://github.com/ExistentialAudio/BlackHole) with `brew install --cask blackhole-2ch`, then restart.
+2. In **Audio MIDI Setup**, create a **Multi-Output Device** with your headphones or speakers and **BlackHole 2ch**.
+3. In your DAW, set the output device to **Multi-Output Device**.
+4. In Mediant, open **Settings**, click **Show input names**, and choose **BlackHole 2ch** under **Record sound from**.
+
+Mediant lines the recorded sound up with your notes.
 
 ## Packages
 
