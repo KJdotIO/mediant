@@ -8,7 +8,7 @@ import type { VideoLayout } from "./frame.ts";
 import { useInputLevel } from "./audioInput.ts";
 import { useRecorder } from "./recorder.ts";
 import { loadAudio, saveAudio, useTakes } from "./store.ts";
-import { chordChanges, type Take } from "./take.ts";
+import { chordChanges, fileStem, type Take } from "./take.ts";
 import { download, midiBlob } from "./files.ts";
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -29,6 +29,31 @@ function takeMeta(take: Take): string {
   return `${clock(take.duration)}, ${chords} ${noun}, ${time.format(take.createdAt)}${sound}`;
 }
 
+/** The take's name, edited in place. An empty name goes back to "Take 4". */
+function TakeName({ take, onRename }: { take: Take; onRename: (name: string) => void }) {
+  const [draft, setDraft] = useState(take.name ?? "");
+  const commit = () => {
+    const name = draft.trim();
+    setDraft(name);
+    if (name !== (take.name ?? "")) onRename(name);
+  };
+  return (
+    <input
+      className="take-name"
+      value={draft}
+      placeholder={`Take ${take.number}`}
+      maxLength={60}
+      aria-label={`Name of take ${take.number}`}
+      title="Name this take. Videos show the name as their title."
+      autoComplete="off"
+      spellCheck={false}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+    />
+  );
+}
+
 interface Props {
   tracker: NoteTracker;
   settings: Settings;
@@ -38,7 +63,7 @@ type Job = { takeId: string; label: string; progress: number } | { takeId: strin
 
 /** Record, stop and retake controls for the deck, and the list of saved takes. */
 export function Recorder({ tracker, settings }: Props) {
-  const { takes, add, remove } = useTakes();
+  const { takes, add, save, remove } = useTakes();
   const [note, setNote] = useState("");
   const [lastId, setLastId] = useState<string>();
   const [job, setJob] = useState<Job>();
@@ -117,7 +142,7 @@ export function Recorder({ tracker, settings }: Props) {
         keyLabels: settings.keyLabels,
         onProgress: (progress) => setJob({ takeId: take.id, label, progress }),
       });
-      download(blob, `mediant-take-${take.number}-${label.replace(":", "x")}.${extension}`);
+      download(blob, `${fileStem(take)}-${label.replace(":", "x")}.${extension}`);
       setJob(undefined);
     } catch (error) {
       setJob({ takeId: take.id, error: error instanceof Error && error.message ? error.message : "Export failed. Try again." });
@@ -198,7 +223,13 @@ export function Recorder({ tracker, settings }: Props) {
               return (
                 <li key={take.id} className="take">
                   <div className="take-info">
-                    <span className="take-name">Take {take.number}</span>
+                    <TakeName
+                      take={take}
+                      onRename={(name) => {
+                        const { name: _, ...rest } = take;
+                        save(name ? { ...rest, name } : rest);
+                      }}
+                    />
                     <span className="take-meta">
                       {takeMeta(take)}
                     </span>
@@ -217,7 +248,7 @@ export function Recorder({ tracker, settings }: Props) {
                       >
                         {playing ? "Stop" : "Play"}
                       </button>
-                      <button type="button" className="button" onClick={() => download(midiBlob(take), `mediant-take-${take.number}.mid`)}>
+                      <button type="button" className="button" onClick={() => download(midiBlob(take), `${fileStem(take)}.mid`)}>
                         MIDI
                       </button>
                       <button type="button" className="button" disabled={!!job} onClick={() => exportTake(take, "landscape")}>

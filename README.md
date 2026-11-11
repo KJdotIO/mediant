@@ -22,7 +22,7 @@ Pick a key at the top of the page and chords are spelled for that key. Pick a so
 - Sustain pedal support, and a setting that keeps the last chord on screen after you let go.
 - Felt, upright and grand piano sounds, and a metronome with tap tempo.
 - Takes: press **Record** or R, play, and watch the take back. With the metronome on, you get a one-bar count-in.
-- Export a take as a MIDI file, or as a 16:9 or 9:16 video of the circle, staff and keyboard.
+- Export a take as a MIDI file, or as a 16:9 or 9:16 video of the circle, staff and keyboard. Name a take in the list and the video shows the name as its title.
 
 Mediant runs in your browser, with no account. Your playing never leaves your computer, and takes are saved in the browser you record them in. Chord names come from fixed music-theory rules, so the same notes always get the same name.
 

@@ -34,6 +34,9 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
   - `src/recording/`: takes. `take.ts` holds the pure parts (trim, `TakeCursor`, MIDI writer), tested in `take.test.ts`. `recorder.ts` records and plays takes through the tracker; with the metronome on, it restarts the click and counts in one bar, and `trimTake` starts the take on the bar line where you come in. `store.ts` keeps takes in IndexedDB. `frame.ts` draws video frames on a canvas (16:9 and 9:16), and `video.ts` renders the piano offline and encodes MP4 with Mediabunny.
   - Browser tests on localhost share the user's `localStorage` and IndexedDB. Restore any setting a test changes, such as `audioInput`, before finishing.
+  - A take can have a `name`, edited in place in the takes list. Videos show it under the logo, files and the MIDI track use it, and the key and tempo sit in the corner of the staff panel.
+  - Test one download in each browser run. A second download started from `page.evaluate` makes Chrome ask about multiple downloads, and Ego Lite hands the tab to the user.
+  - To check video frames without an export, import `/src/recording/frame.ts` in the page, draw with `FrameRenderer` on a canvas, and save `toDataURL()`.
   - After a test deletes a take, wait until IndexedDB no longer has it before you reload. A reload straight after the click cancels the delete.
   - To test MIDI without a keyboard, replace `navigator.requestMIDIAccess` with `Page.addScriptToEvaluateOnNewDocument` before the page loads, and call `onmidimessage` on the fake inputs.
   - To check an exported video, sample frames after seeking and wait two animation frames before drawing; reading straight after `seeked` can return a stale frame.
