@@ -50,7 +50,7 @@ const symbolScale = (text: string) => (text.length <= 4 ? 1 : text.length <= 7 ?
 
 
 export function App() {
-  const { notes, held: heldKeys, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
+  const { notes, harmony, held: heldKeys, pedal, clears } = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot);
   const [settings, update] = useSettings();
   const midi = useMidi(tracker, settings.midiInput);
   const octave = useComputerKeys(tracker);
@@ -68,7 +68,7 @@ export function App() {
   const options = useMemo<IdentifyOptions>(() => (key ? { key } : {}), [key?.tonic, key?.mode]);
   const keyNotes = useMemo(() => (options.key ? scaleNotes(options.key) : []), [options]);
 
-  const live = useMemo(() => identify(notes, options), [notes, options]);
+  const live = useMemo(() => identify(harmony, options), [harmony, options]);
   const history = useRef<Sample[]>([]);
   const [heldNotes, setHeldNotes] = useState<number[]>(NO_NOTES);
   useEffect(() => {
@@ -98,6 +98,10 @@ export function App() {
   const reading = live ?? (!settled || settings.holdLastChord ? held : null);
   const dim = !live && settled && reading !== null;
   const pressed = useMemo(() => (live ? new Set(heldKeys) : undefined), [live, heldKeys]);
+  const ringing = useMemo(
+    () => (live && notes.length > harmony.length ? new Set(notes.filter((n) => !harmony.includes(n))) : undefined),
+    [live, notes, harmony],
+  );
   const readingNotes = reading?.notes ?? EMPTY;
   const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
   const heading = readingTitle(reading);
@@ -254,6 +258,7 @@ export function App() {
         <Keyboard
           notes={readingNotes}
           pressed={pressed}
+          ringing={ringing}
           rootPc={rootPc}
           labels={settings.keyLabels}
           middleC={settings.middleC}

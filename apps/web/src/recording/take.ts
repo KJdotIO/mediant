@@ -42,16 +42,17 @@ export function fileStem(take: Pick<Take, "number" | "name">): string {
   return slug || `mediant-take-${take.number}`;
 }
 
-export function applyEvent(tracker: NoteTracker, event: NoteEvent) {
+/** Plays an event into a tracker. `at` is when it happens, in milliseconds; without it, now. */
+export function applyEvent(tracker: NoteTracker, event: NoteEvent, at?: number) {
   switch (event.type) {
     case "on":
-      return tracker.noteOn(event.note, event.velocity);
+      return tracker.noteOn(event.note, event.velocity, at);
     case "off":
-      return tracker.noteOff(event.note);
+      return tracker.noteOff(event.note, at);
     case "pedal":
-      return tracker.setPedal(event.down);
+      return tracker.setPedal(event.down, at);
     case "clear":
-      return tracker.clear();
+      return tracker.clear(at);
   }
 }
 
@@ -104,7 +105,8 @@ export class TakeCursor {
 
   notesAt(t: number): number[] {
     while (this.index < this.events.length && this.events[this.index]!.t <= t) {
-      applyEvent(this.tracker, this.events[this.index++]!);
+      const event = this.events[this.index++]!;
+      applyEvent(this.tracker, event, event.t * 1000);
     }
     return this.tracker.getSnapshot().notes;
   }

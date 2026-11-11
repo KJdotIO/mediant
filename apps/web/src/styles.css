@@ -1329,6 +1329,15 @@ button:focus-visible {
   fill: color-mix(in oklab, var(--root) 55%, #0e0e0e);
 }
 
+/* Notes the pedal still holds from an earlier chord: sounding, but not part of the name. */
+.key.is-white.is-ringing rect {
+  fill: #c9c5bd;
+}
+
+.key.is-black.is-ringing rect {
+  fill: #34322e;
+}
+
 .key-label {
   font-family: var(--font);
   font-size: 11px;
