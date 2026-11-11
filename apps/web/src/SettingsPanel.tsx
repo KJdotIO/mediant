@@ -8,6 +8,8 @@ interface Props {
   onClose: () => void;
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
+  /** Names of the connected MIDI inputs. */
+  midiInputs: string[];
 }
 
 function Slider({ label, value, min = 0, max = 1, step = 0.01, unit, onChange }: {
@@ -43,7 +45,7 @@ function Switch({ label, checked, onChange }: { label: string; checked: boolean;
  * Settings in a panel over the right-hand column. The circle and keyboard stay in view, so a
  * change shows straight away, and you can keep playing while it's open.
  */
-export function SettingsPanel({ open, onClose, settings, update }: Props) {
+export function SettingsPanel({ open, onClose, settings, update, midiInputs }: Props) {
   const close = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -64,6 +66,28 @@ export function SettingsPanel({ open, onClose, settings, update }: Props) {
           </svg>
         </button>
       </div>
+
+      {(midiInputs.length > 1 || settings.midiInput) && (
+        <section className="settings-group" aria-labelledby="settings-keyboard">
+          <h3 id="settings-keyboard" className="settings-group-title">Keyboard</h3>
+          <label className="setting">
+            <span>MIDI input</span>
+            <span className="select is-compact">
+              <select value={settings.midiInput} onChange={(e) => update({ midiInput: e.target.value })}>
+                <option value="">All inputs</option>
+                {settings.midiInput && !midiInputs.includes(settings.midiInput) && (
+                  <option value={settings.midiInput}>{settings.midiInput} (not connected)</option>
+                )}
+                {midiInputs.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
+        </section>
+      )}
 
       <section className="settings-group" aria-labelledby="settings-display">
         <h3 id="settings-display" className="settings-group-title">Display</h3>

@@ -53,22 +53,24 @@ function lastSound(events: readonly TakeEvent[], stoppedAt: number): number {
 export interface TrimOptions {
   leadIn: number;
   tail: number;
-  /** Keep the start where it is, so the take stays on the metronome's bar lines. */
-  aligned: boolean;
+  /** Bar and beat lengths in seconds, when the take was recorded against the metronome. */
+  grid?: { bar: number; beat: number } | undefined;
 }
 
 /**
- * Cuts the silence around a take down to the lead-in and tail. Returns null when nothing was
- * played.
+ * Cuts the silence around a take down to the lead-in and tail. Against the metronome, the take
+ * starts on a bar line instead, so it stays on the grid: the count-in goes, and so does any
+ * whole bar before you come in. A first note up to a quarter of a beat early counts as the
+ * downbeat. Returns null when nothing was played.
  */
 export function trimTake(
   events: readonly TakeEvent[],
   stoppedAt: number,
-  { leadIn, tail, aligned }: TrimOptions,
+  { leadIn, tail, grid }: TrimOptions,
 ): { events: TakeEvent[]; duration: number; shift: number } | null {
   const firstOn = events.find((e) => e.type === "on")?.t;
   if (firstOn === undefined) return null;
-  const shift = aligned ? 0 : Math.max(0, firstOn - leadIn);
+  const shift = grid ? Math.floor((firstOn + grid.beat / 4) / grid.bar) * grid.bar : Math.max(0, firstOn - leadIn);
   const end = Math.min(stoppedAt, lastSound(events, stoppedAt) + tail);
   return {
     events: events.map((e) => ({ ...e, t: Math.max(0, e.t - shift) })),

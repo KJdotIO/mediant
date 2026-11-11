@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface NoteSnapshot {
   /** Every sounding note: keys down, plus notes the sustain pedal holds. */
@@ -101,11 +101,19 @@ export function arrivalTime(stamp: number, now: number): number {
   return stamp > 0 && stamp <= now && now - stamp < 1000 ? stamp : now;
 }
 
-/** Connects every MIDI input to the tracker and follows devices as they connect and disconnect. */
-export function useMidi(tracker: NoteTracker): MidiStatus {
+const inputName = (input: MIDIInput) => input.name ?? "MIDI keyboard";
+
+/**
+ * Connects MIDI inputs to the tracker and follows devices as they connect and disconnect. It
+ * listens to the chosen input, or to every input when none is chosen. A DAW that echoes your
+ * keyboard to a virtual port would otherwise play every note twice.
+ */
+export function useMidi(tracker: NoteTracker, chosen = ""): MidiStatus {
   const [status, setStatus] = useState<MidiStatus>(() =>
     "requestMIDIAccess" in navigator ? { state: "connecting" } : { state: "unsupported" },
   );
+  const wanted = useRef(chosen);
+  const reconnect = useRef(() => {});
 
   useEffect(() => {
     if (!("requestMIDIAccess" in navigator)) return;
@@ -122,7 +130,8 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
       const b = data[2] ?? 0;
       const at = arrivalTime(event.timeStamp, performance.now());
       if (type === 0x90 && b > 0) {
-        const name = (event.currentTarget as MIDIInput | null)?.name ?? undefined;
+        const input = event.currentTarget as MIDIInput | null;
+        const name = input ? inputName(input) : undefined;
         if (name && name !== active) {
           active = name;
           setStatus({ state: "ready", inputs: names, active });
@@ -136,11 +145,15 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
     const connect = () => {
       if (!access) return;
       const inputs = [...access.inputs.values()].filter((input) => input.state === "connected");
-      for (const input of inputs) input.onmidimessage = onMessage;
-      names = inputs.map((input) => input.name ?? "MIDI keyboard");
+      for (const input of inputs) {
+        input.onmidimessage = !wanted.current || inputName(input) === wanted.current ? onMessage : null;
+      }
+      names = [...new Set(inputs.map(inputName))];
       if (active && !names.includes(active)) active = undefined;
       setStatus({ state: "ready", inputs: names, active });
     };
+
+    reconnect.current = connect;
 
     navigator
       .requestMIDIAccess()
@@ -162,6 +175,13 @@ export function useMidi(tracker: NoteTracker): MidiStatus {
       for (const input of access.inputs.values()) input.onmidimessage = null;
     };
   }, [tracker]);
+
+  useEffect(() => {
+    if (wanted.current === chosen) return;
+    wanted.current = chosen;
+    tracker.clear();
+    reconnect.current();
+  }, [tracker, chosen]);
 
   return status;
 }
