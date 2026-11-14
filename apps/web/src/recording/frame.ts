@@ -57,6 +57,8 @@ const COLOURS = {
   onLight: "#1a140e",
   white: "#e8e5df",
   black: "#0e0e0e",
+  ringingWhite: "#c9c5bd",
+  ringingBlack: "#34322e",
 };
 
 const FONT = '"Archivo Variable", -apple-system, sans-serif';
@@ -126,7 +128,8 @@ export class FrameRenderer {
   }
 
   draw(t: number) {
-    const notes = this.cursor.notesAt(t);
+    this.cursor.notesAt(t);
+    const { harmony: notes, notes: sounding, held } = this.cursor.tracker.getSnapshot();
     const id = notes.join(",");
     let live = this.readings.get(id);
     if (live === undefined) {
@@ -147,7 +150,8 @@ export class FrameRenderer {
 
     const reading = live ?? this.held;
     const dim = !live && !!reading && t - this.silentFrom! >= HOLD_GRACE_MS / 1000;
-    const pressed = live ? new Set(this.cursor.tracker.getSnapshot().held) : undefined;
+    const pressed = live ? new Set(held) : undefined;
+    const ringing = live ? sounding.filter((n) => !notes.includes(n)) : [];
     const readingNotes = reading?.notes ?? [];
     const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
 
@@ -159,7 +163,7 @@ export class FrameRenderer {
     ctx.globalAlpha = dim ? DIM : 1;
     this.drawCircle(readingNotes, rootPc, readingTitle(reading));
     this.drawStaff(readingNotes, rootPc);
-    this.drawKeys(readingNotes, rootPc, pressed);
+    this.drawKeys(readingNotes, rootPc, pressed, ringing);
     ctx.globalAlpha = 1;
     this.drawDetails();
   }
@@ -295,7 +299,7 @@ export class FrameRenderer {
     ctx.drawImage(this.staff.image, box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h);
   }
 
-  private drawKeys(notes: NoteReading[], rootPc: number | undefined, pressed: ReadonlySet<number> | undefined) {
+  private drawKeys(notes: NoteReading[], rootPc: number | undefined, pressed: ReadonlySet<number> | undefined, ringing: readonly number[]) {
     const { ctx } = this;
     const box = this.spec.keys;
     const [low, high] = this.range;
@@ -324,7 +328,8 @@ export class FrameRenderer {
       const base = black ? COLOURS.black : COLOURS.white;
       const lit = isRoot ? COLOURS.root : black ? COLOURS.toneBlack : COLOURS.tone;
       const sustained = note && pressed && !pressed.has(midi);
-      ctx.fillStyle = !note ? base : sustained ? mix(lit, base, isRoot ? 0.5 : 0.55) : lit;
+      const rest = ringing.includes(midi) ? (black ? COLOURS.ringingBlack : COLOURS.ringingWhite) : base;
+      ctx.fillStyle = !note ? rest : sustained ? mix(lit, base, isRoot ? 0.5 : 0.55) : lit;
       ctx.fill();
       if (note) {
         const label = this.options.keyLabels === "intervals" ? (note.degree ?? "") : withoutOctave(note.name);

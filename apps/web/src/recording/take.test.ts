@@ -61,6 +61,15 @@ describe("TakeCursor", () => {
     const cursor = new TakeCursor([pedal(0, true), ...chord(1, 2, [60, 64, 67]), pedal(3, false)]);
     expect([0.5, 1, 2.5, 3].map((t) => cursor.notesAt(t))).toEqual([[], [60, 64, 67], [60, 64, 67], []]);
   });
+
+  it("leaves an earlier pedalled chord out of the harmony, from the take's own timing", () => {
+    const am7 = [57, 60, 64, 67];
+    const cmaj7 = [72, 76, 79, 83];
+    const cursor = new TakeCursor([pedal(0, true), ...chord(0.5, 1, am7), ...cmaj7.map((n, i) => on(2 + i * 0.005, n))]);
+    cursor.notesAt(3);
+    expect(cursor.tracker.getSnapshot().harmony).toEqual(cmaj7);
+    expect(cursor.tracker.getSnapshot().notes).toEqual([...am7, ...cmaj7]);
+  });
 });
 
 describe("chordChanges", () => {

@@ -5,6 +5,11 @@ export interface NoteSnapshot {
   notes: number[];
   /** Only the keys physically down. */
   held: number[];
+  /**
+   * The notes that count towards the chord name. With the pedal down, a new chord replaces the
+   * earlier notes the pedal still holds, apart from a bass note played just before it.
+   */
+  harmony: number[];
   pedal: boolean;
   /** Goes up by one each time someone clears the notes. */
   clears: number;
@@ -16,6 +21,13 @@ export type NoteEvent =
   | { type: "pedal"; down: boolean }
   | { type: "clear" };
 
+/** Notes struck within this many milliseconds of the one before belong to one strike, such as a chord. */
+const STRIKE_WINDOW_MS = 100;
+/** A strike is a chord when it puts down at least this many different notes at once. */
+const CHORD_SIZE = 3;
+
+const pitchClasses = (notes: Iterable<number>) => new Set([...notes].map((note) => note % 12)).size;
+
 /**
  * Tracks which notes sound. A note sounds while its key is down, or after release while the
  * sustain pedal is down. MIDI and the computer keyboard both feed one tracker.
@@ -25,7 +37,17 @@ export class NoteTracker {
   private sustained = new Set<number>();
   private pedal = false;
   private clears = 0;
-  private snapshot: NoteSnapshot = { notes: [], held: [], pedal: false, clears: 0 };
+  private snapshot: NoteSnapshot = { notes: [], held: [], harmony: [], pedal: false, clears: 0 };
+  /** The strike each note belongs to. Strikes are numbered in the order they happen. */
+  private strikes = new Map<number, number>();
+  private strike = 0;
+  private struckAt = -Infinity;
+  private strikeNotes = new Set<number>();
+  private previousStrikeSize = 0;
+  /** The strike of the latest chord, its lowest note, and whether the strike before it was a bass note. */
+  private chord = 0;
+  private chordLowest = 0;
+  private bassBeforeChord = false;
   private listeners = new Set<() => void>();
   private eventListeners = new Set<(event: NoteEvent, at: number) => void>();
 
@@ -48,6 +70,7 @@ export class NoteTracker {
   noteOn(note: number, velocity = 96, at = performance.now()) {
     this.sustained.delete(note);
     this.held.add(note);
+    this.struck(note, at);
     this.send({ type: "on", note, velocity }, at);
     this.emit();
   }
@@ -75,6 +98,29 @@ export class NoteTracker {
     this.emit();
   }
 
+  /** Files a note under its strike, and notes when that strike becomes a chord. */
+  private struck(note: number, at: number) {
+    if (at - this.struckAt > STRIKE_WINDOW_MS) {
+      this.previousStrikeSize = pitchClasses(this.strikeNotes);
+      this.strikeNotes = new Set();
+      this.strike++;
+    }
+    this.struckAt = at;
+    this.strikeNotes.add(note);
+    this.strikes.set(note, this.strike);
+    const down = [...this.held].filter((n) => this.strikes.get(n) === this.strike);
+    if (pitchClasses(down) < CHORD_SIZE) return;
+    if (this.chord !== this.strike) this.bassBeforeChord = this.previousStrikeSize > 0 && this.previousStrikeSize < CHORD_SIZE;
+    this.chord = this.strike;
+    this.chordLowest = Math.min(...down);
+  }
+
+  private counts(note: number): boolean {
+    if (this.held.has(note)) return true;
+    const strike = this.strikes.get(note) ?? 0;
+    return strike >= this.chord || (strike === this.chord - 1 && this.bassBeforeChord && note < this.chordLowest);
+  }
+
   private send(event: NoteEvent, at: number) {
     for (const listener of this.eventListeners) listener(event, at);
   }
@@ -82,7 +128,8 @@ export class NoteTracker {
   private emit() {
     const notes = [...new Set([...this.held, ...this.sustained])].sort((a, b) => a - b);
     const held = [...this.held].sort((a, b) => a - b);
-    this.snapshot = { notes, held, pedal: this.pedal, clears: this.clears };
+    const harmony = notes.filter((note) => this.counts(note));
+    this.snapshot = { notes, held, harmony, pedal: this.pedal, clears: this.clears };
     for (const listener of this.listeners) listener();
   }
 }
