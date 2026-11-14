@@ -1194,6 +1194,165 @@ button:focus-visible {
   overflow: hidden;
 }
 
+/* Next chords */
+
+.stage.has-next {
+  grid-template-columns: minmax(0, 1fr) 232px 360px;
+}
+
+.next {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 16px 16px;
+  overflow: hidden;
+}
+
+.next-head {
+  display: grid;
+  gap: 4px;
+  padding-inline: 4px;
+}
+
+.next-context {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.next-list {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.next-card {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--raised);
+  overflow: hidden;
+}
+
+.next-card.is-empty {
+  align-content: center;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.next-card.is-empty .empty {
+  font-size: 13px;
+}
+
+/* The first card is the one marked on the keyboard. */
+.next-card.is-first {
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.next-card.is-played {
+  background: var(--root-fill);
+  box-shadow: inset 0 0 0 1.5px var(--root);
+}
+
+.next-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.next-symbol {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.next-roman {
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.next-reason {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-keys {
+  display: block;
+  align-self: end;
+  width: 100%;
+  height: 100%;
+  min-height: 16px;
+  max-height: 40px;
+  margin-top: 8px;
+}
+
+.mini-key.is-white {
+  fill: #e8e5df;
+}
+
+.mini-key.is-black {
+  fill: #0e0e0e;
+  stroke: var(--raised);
+  stroke-width: 1;
+}
+
+.mini-key.is-white.is-tone {
+  fill: var(--tone);
+}
+
+.mini-key.is-black.is-tone {
+  fill: #c9b78f;
+}
+
+.mini-key.is-root {
+  fill: var(--root);
+}
+
+/* Where the first suggestion's notes go, on the big keyboard. */
+.key-next {
+  fill: var(--on-light);
+}
+
+.key.is-black:not(.is-tone, .is-root) .key-next {
+  fill: var(--tone);
+}
+
+.key-next.is-root {
+  fill: var(--root);
+  stroke: var(--on-light);
+  stroke-width: 1.5;
+}
+
+.circle-next {
+  fill: none;
+  stroke: var(--tone);
+  stroke-opacity: 0.45;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+  stroke-linejoin: round;
+}
+
 /* Deck */
 
 .deck {
@@ -1415,8 +1574,14 @@ button:focus-visible {
     min-height: 100dvh;
   }
 
-  .stage {
+  .stage,
+  .stage.has-next {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .next-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
   }
 
   .hero {

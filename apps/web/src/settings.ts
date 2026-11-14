@@ -1,4 +1,4 @@
-import type { Key } from "@mediant/theory";
+import type { Key, VoicingStyle } from "@mediant/theory";
 import { useCallback, useState } from "react";
 import type { SoundId } from "./audio/piano.ts";
 
@@ -23,6 +23,8 @@ export interface Settings {
   monitorInput: boolean;
   /** The name of the one MIDI input to listen to, or "" for every input. */
   midiInput: string;
+  suggestions: boolean;
+  voicing: VoicingStyle;
 }
 
 const STORAGE_KEY = "mediant.settings";
@@ -43,6 +45,8 @@ const DEFAULTS: Settings = {
   audioLabel: "",
   monitorInput: true,
   midiInput: "",
+  suggestions: true,
+  voicing: "closest",
 };
 
 const MAJOR_TONICS = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];

@@ -9,3 +9,4 @@ export {
 } from "./identify.ts";
 export { scaleNotes, type Key } from "./key.ts";
 export { formatSymbol, noteName, parseNote, pitchClass, type Spelling } from "./notes.ts";
+export { suggest, type Reason, type SuggestOptions, type SuggestResult, type Suggestion, type VoicingStyle } from "./suggest.ts";

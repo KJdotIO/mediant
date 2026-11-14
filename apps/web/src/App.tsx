@@ -1,10 +1,11 @@
-import { formatSymbol, identify, scaleNotes, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
+import { formatSymbol, identify, scaleNotes, suggest, type IdentifyOptions, type NoteReading, type Reading } from "@mediant/theory";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useAudioBlocked } from "./audio/context.ts";
 import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
-import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, readingTitle, type Sample } from "./logic.ts";
+import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, playedSuggestion, readingTitle, sameNotes, SETTLE_MS, type Sample } from "./logic.ts";
+import { Next } from "./Next.tsx";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
 import { Recorder } from "./recording/Recorder.tsx";
@@ -95,6 +96,28 @@ export function App() {
   }, [live]);
   const held = useMemo(() => identify(heldNotes, options), [heldNotes, options]);
 
+  const [basis, setBasis] = useState<number[]>(NO_NOTES);
+  useEffect(() => {
+    if (!settings.suggestions || live?.kind !== "chord") return;
+    const id = setTimeout(() => setBasis((b) => (sameNotes(b, harmony) ? b : harmony)), SETTLE_MS);
+    return () => clearTimeout(id);
+  }, [settings.suggestions, live, harmony]);
+  useEffect(() => setBasis(NO_NOTES), [clears]);
+  const next = useMemo(
+    () => (settings.suggestions && basis.length ? suggest(basis, { ...options, voicing: settings.voicing }) : null),
+    [settings.suggestions, settings.voicing, basis, options],
+  );
+  const afterSymbol = useMemo(() => {
+    const r = basis.length ? identify(basis, options) : null;
+    return r?.kind === "chord" ? r.symbol : "";
+  }, [basis, options]);
+  const played = next ? playedSuggestion(live, next.suggestions) : -1;
+  const shown = next && (harmony.length === 0 || sameNotes(harmony, basis)) ? next.suggestions[0] : undefined;
+  const nextKeys = useMemo(
+    () => (shown ? new Map(shown.notes.map((n) => [n.midi, n.pitchClass === shown.rootPc])) : undefined),
+    [shown],
+  );
+
   const reading = live ?? (!settled || settings.holdLastChord ? held : null);
   const dim = !live && settled && reading !== null;
   const pressed = useMemo(() => (live ? new Set(heldKeys) : undefined), [live, heldKeys]);
@@ -176,9 +199,9 @@ export function App() {
         </div>
       </header>
 
-      <main className="stage">
+      <main className={`stage${settings.suggestions ? " has-next" : ""}`}>
         <section className="panel hero reveal" aria-label="Circle of fifths">
-          <Circle notes={readingNotes} rootPc={rootPc} keyNotes={keyNotes} dim={dim} />
+          <Circle notes={readingNotes} rootPc={rootPc} keyNotes={keyNotes} dim={dim} next={shown?.notes} />
           <div className={`readout${dim ? " is-dim" : ""}`}>
             {heading ? (
               <h1 className="symbol" style={{ fontSize: `${symbolScale(heading)}em` }}>
@@ -192,6 +215,8 @@ export function App() {
             {announcement}
           </p>
         </section>
+
+        {settings.suggestions && <Next result={next} after={afterSymbol} played={played} />}
 
         <div className="side reveal">
           <section className={`panel chord${dim ? " is-dim" : ""}`} aria-label="Chord details">
@@ -263,6 +288,7 @@ export function App() {
           labels={settings.keyLabels}
           middleC={settings.middleC}
           dim={dim}
+          next={nextKeys}
         />
       </footer>
     </div>

@@ -1,4 +1,4 @@
-import { formatSymbol, type Degree, type NoteReading, type Reading } from "@mediant/theory";
+import { formatSymbol, type Degree, type NoteReading, type Reading, type Reason, type Suggestion } from "@mediant/theory";
 
 /** The big text for a reading: the chord symbol, the note, the interval name or "Cluster". */
 export function readingTitle(reading: Reading | null): string {
@@ -89,3 +89,38 @@ export function ottava(midi: readonly number[], clef: "treble" | "bass"): 0 | 1 
 
 /** Octave number for a MIDI note. Logic and Ableton call middle C "C3"; most other software calls it "C4". */
 export const octaveOf = (midi: number, middleC: "C3" | "C4") => Math.floor(midi / 12) - (middleC === "C3" ? 2 : 1);
+
+/** A chord must sound this long, unchanged, before the suggestions follow it. Faster playing leaves them as they were. */
+export const SETTLE_MS = 400;
+
+/** The short reason shown under a suggestion. */
+export function reasonText(reason: Reason): string {
+  switch (reason.kind) {
+    case "home":
+      return "Resolves home";
+    case "fifth":
+      return "Down a fifth";
+    case "fifthUp":
+      return "Up a fifth";
+    case "deceptive":
+      return "Deceptive cadence";
+    case "secondary":
+      return `V of ${formatSymbol(reason.of)}`;
+    case "tritone":
+      return `Tritone sub for ${formatSymbol(reason.of)}`;
+    case "borrowed":
+      return `From ${formatSymbol(reason.from)}`;
+    case "shared":
+      return reason.count === 0 ? "Shares no notes" : reason.count === 1 ? "Shares 1 note" : `Shares ${reason.count} notes`;
+  }
+}
+
+/** The suggestion you're playing: same root, with its root, third and seventh all sounding. */
+export function playedSuggestion(reading: Reading | null, suggestions: readonly Suggestion[]): number {
+  if (reading?.kind !== "chord") return -1;
+  const root = reading.notes.find((n) => n.degree === "1")?.pitchClass;
+  const sounding = new Set(reading.notes.map((n) => n.pitchClass));
+  return suggestions.findIndex((s) => s.rootPc === root && s.required.every((pc) => sounding.has(pc)));
+}
+
+export const sameNotes = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((n, i) => n === b[i]);
