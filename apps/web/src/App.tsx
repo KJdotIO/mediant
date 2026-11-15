@@ -142,16 +142,19 @@ export function App() {
 
   const reading = shownLive ?? (!settled || settings.holdLastChord ? held : null);
   const dim = !live && settled && reading !== null;
-  const pressed = useMemo(() => (live && shownLive === live ? new Set(heldKeys) : undefined), [live, shownLive, heldKeys]);
+  // The keys, circle, staff and Notes panel follow your hands. Only the chord name bridges the
+  // short gap between chords, unless Hold last chord keeps everything.
+  const shape = live ?? (settings.holdLastChord ? reading : null);
+  const pressed = useMemo(() => (live ? new Set(heldKeys) : undefined), [live, heldKeys]);
   const ringing = useMemo(
     () => (live && notes.length > harmony.length ? new Set(notes.filter((n) => !harmony.includes(n))) : undefined),
     [live, notes, harmony],
   );
-  const readingNotes = reading?.notes ?? EMPTY;
-  const rootPc = reading?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
+  const readingNotes = shape?.notes ?? EMPTY;
+  const rootPc = shape?.kind === "chord" ? readingNotes.find((n) => n.degree === "1")?.pitchClass : undefined;
   const heading = readingTitle(reading);
   const status = statusText(midi, settings.midiInput);
-  const alternatives = reading?.kind === "chord" ? reading.alternatives.map((a) => formatSymbol(a.symbol)) : [];
+  const alternatives = shape?.kind === "chord" ? shape.alternatives.map((a) => formatSymbol(a.symbol)) : [];
   const groups = noteGroups(readingNotes);
 
   const [announcement, setAnnouncement] = useState("");

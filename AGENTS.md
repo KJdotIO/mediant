@@ -28,6 +28,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - Settings persist in `localStorage` under `mediant.settings`: hold last chord, key labels, middle C (C3 or C4), the key and the MIDI input.
   - `useMidi` listens to the MIDI input chosen in **Settings**, or to every input when none is chosen. The picker shows when two or more inputs are connected.
   - The snapshot's `harmony` holds the notes that count towards the chord name, and `notes` holds everything that sounds. With the pedal down, a chord (three or more different notes down within 100 ms) replaces the earlier notes the pedal holds. A bass note struck just before the chord stays, and so do keys still down. The keyboard draws the rest in grey.
+  - The keys, circle, staff and Notes panel follow your hands. Only the chord name stays through a gap of up to `HOLD_GRACE_MS` between chords, unless **Hold last chord** keeps everything. While keys come up unevenly, `releaseReading` keeps the fuller name.
   - `TakeCursor` passes each event's own time to the tracker, so videos group notes the same way every time.
   - `NoteTracker` passes each listener the time the event happened. MIDI events use the message's own `timeStamp`.
   - `src/wakeLock.ts` keeps the screen awake for five minutes after the last note.
