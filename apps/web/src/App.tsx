@@ -4,7 +4,19 @@ import { useAudioBlocked } from "./audio/context.ts";
 import { SOUNDS, usePiano, type SoundId, type SoundState } from "./audio/piano.ts";
 import { Circle } from "./Circle.tsx";
 import { Keyboard } from "./Keyboard.tsx";
-import { HOLD_GRACE_MS, heldReading, noteGroups, octaveOf, playedSuggestion, readingTitle, sameNotes, SETTLE_MS, type Sample } from "./logic.ts";
+import {
+  HOLD_GRACE_MS,
+  heldReading,
+  noteGroups,
+  octaveOf,
+  playedSuggestion,
+  readingTitle,
+  RELEASE_WINDOW,
+  releaseReading,
+  sameNotes,
+  SETTLE_MS,
+  type Sample,
+} from "./logic.ts";
 import { Next } from "./Next.tsx";
 import { NoteTracker, useComputerKeys, useMidi, type MidiStatus } from "./notes.ts";
 import { KEY_OPTIONS, parseKey, useSettings } from "./settings.ts";
@@ -70,21 +82,31 @@ export function App() {
   const keyNotes = useMemo(() => (options.key ? scaleNotes(options.key) : []), [options]);
 
   const live = useMemo(() => identify(harmony, options), [harmony, options]);
-  const history = useRef<Sample[]>([]);
-  const [heldNotes, setHeldNotes] = useState<number[]>(NO_NOTES);
-  useEffect(() => {
-    if (live) {
-      history.current.push({ at: performance.now(), reading: live });
-      if (history.current.length > 32) history.current.shift();
-    } else if (history.current.length) {
-      setHeldNotes(heldReading(history.current, performance.now())?.notes.map((n) => n.midi) ?? NO_NOTES);
-      history.current = [];
+  // The chord to hold is worked out in the same render as the release. Waiting for an effect
+  // would show one frame of nothing, then the chord again, which reads as a flash.
+  const [track, setTrack] = useState<{ live: Reading | null; clears: number; history: Sample[]; held: number[] }>(() => ({
+    live: null,
+    clears,
+    history: [],
+    held: NO_NOTES,
+  }));
+  if (track.live !== live || track.clears !== clears) {
+    const at = performance.now();
+    if (track.clears !== clears) setTrack({ live, clears, history: live ? [{ at, reading: live }] : [], held: NO_NOTES });
+    else if (live) setTrack({ ...track, live, history: [...track.history, { at, reading: live }].slice(-32) });
+    else {
+      const held = track.history.length ? (heldReading(track.history, at)?.notes.map((n) => n.midi) ?? NO_NOTES) : track.held;
+      setTrack({ live, clears, history: [], held });
     }
-  }, [live]);
+  }
+  const heldNotes = track.held;
+  const shownLive = live && releaseReading(track.history, live, performance.now());
+  const [, recheck] = useState(0);
   useEffect(() => {
-    setHeldNotes(NO_NOTES);
-    history.current = [];
-  }, [clears]);
+    if (shownLive === live) return;
+    const id = setTimeout(() => recheck((n) => n + 1), RELEASE_WINDOW + 10);
+    return () => clearTimeout(id);
+  }, [shownLive, live]);
   const [settled, setSettled] = useState(true);
   useEffect(() => {
     if (live) {
@@ -118,9 +140,9 @@ export function App() {
     [shown],
   );
 
-  const reading = live ?? (!settled || settings.holdLastChord ? held : null);
+  const reading = shownLive ?? (!settled || settings.holdLastChord ? held : null);
   const dim = !live && settled && reading !== null;
-  const pressed = useMemo(() => (live ? new Set(heldKeys) : undefined), [live, heldKeys]);
+  const pressed = useMemo(() => (live && shownLive === live ? new Set(heldKeys) : undefined), [live, shownLive, heldKeys]);
   const ringing = useMemo(
     () => (live && notes.length > harmony.length ? new Set(notes.filter((n) => !harmony.includes(n))) : undefined),
     [live, notes, harmony],

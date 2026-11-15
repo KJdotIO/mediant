@@ -44,6 +44,20 @@ export function heldReading(history: readonly Sample[], now: number): Reading | 
   return best;
 }
 
+/**
+ * The reading to show while keys come up. Fingers never lift together, so each key up leaves a
+ * smaller chord for a few milliseconds. While the notes sounding are part of the fuller chord shown
+ * within the release window, that chord stays. A new note, or holding the smaller chord past the
+ * window, shows what you play.
+ */
+export function releaseReading(history: readonly Sample[], live: Reading | null, now: number): Reading | null {
+  if (!live) return null;
+  const fuller = heldReading(history, now);
+  if (!fuller || fuller.notes.length <= live.notes.length) return live;
+  const notes = new Set(fuller.notes.map((n) => n.midi));
+  return live.notes.every((n) => notes.has(n.midi)) ? fuller : live;
+}
+
 export interface NoteGroup {
   id: string;
   name: string;

@@ -1,6 +1,6 @@
 import { identify, parseNote, suggest, type Reading } from "@mediant/theory";
 import { describe, expect, it } from "vitest";
-import { heldReading, noteGroups, octaveOf, ottava, playedSuggestion, reasonText, RELEASE_WINDOW, type Sample } from "./logic.ts";
+import { heldReading, noteGroups, octaveOf, ottava, playedSuggestion, reasonText, releaseReading, RELEASE_WINDOW, type Sample } from "./logic.ts";
 
 const read = (notes: string): Reading => identify(notes.split(" ").map(parseNote))!;
 const symbol = (reading: Reading | null) => (reading?.kind === "chord" ? reading.symbol : reading?.kind);
@@ -60,6 +60,26 @@ describe("octaveOf", () => {
     expect(octaveOf(60, "C3")).toBe(3);
     expect(octaveOf(21, "C4")).toBe(0);
     expect(octaveOf(108, "C3")).toBe(7);
+  });
+});
+
+describe("releaseReading", () => {
+  const cmaj7 = read("C4 E4 G4 B4");
+  const history: Sample[] = [{ at: 0, reading: cmaj7 }];
+
+  it("keeps the whole chord while the keys come up unevenly", () => {
+    const partial = read("C4 E4 G4");
+    expect(symbol(releaseReading([...history, { at: 1000, reading: partial }], partial, 1030))).toBe("Cmaj7");
+  });
+
+  it("shows the smaller chord once you hold it past the release window", () => {
+    const partial = read("C4 E4 G4");
+    expect(symbol(releaseReading([...history, { at: 1000, reading: partial }], partial, 1000 + RELEASE_WINDOW + 1))).toBe("C");
+  });
+
+  it("shows a new note straight away", () => {
+    const more = read("C4 E4 G4 B4 D5");
+    expect(symbol(releaseReading([...history, { at: 1000, reading: more }], more, 1000))).toBe("Cmaj9");
   });
 });
 
