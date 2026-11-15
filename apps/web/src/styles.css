@@ -17,6 +17,10 @@
   --record: #ff5a4e;
   --radius: 20px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Things leave faster than they arrive, accelerating away. */
+  --ease-leave: cubic-bezier(0.4, 0, 1, 1);
+  --enter: 220ms;
+  --leave: 140ms;
   --font: "Archivo Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-family: var(--font);
   font-size: 16px;
@@ -258,7 +262,18 @@ label.setting {
 
 @media (prefers-reduced-motion: no-preference) {
   .switch::before {
-    transition: translate 150ms var(--ease-out);
+    transition-property: translate, width;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  /* While pressed, the knob stretches towards where it will go. */
+  .switch:active::before {
+    width: 20px;
+  }
+
+  .switch:checked:active::before {
+    translate: 10px 0;
   }
 }
 
@@ -368,6 +383,28 @@ label.setting {
   height: 6px;
   border-radius: 50%;
   background: var(--line-strong);
+}
+
+/* Lights past the end of the bar take no room. A change to the bar fades them in or out. */
+.beat[data-on="false"] {
+  width: 0;
+  margin-inline-start: -4px;
+  opacity: 0;
+  scale: 0.4;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .beat {
+    transition-property: width, margin-inline-start, opacity, scale, filter;
+    transition-duration: var(--enter);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .beat[data-on="false"] {
+    filter: blur(2px);
+    transition-duration: var(--leave);
+    transition-timing-function: var(--ease-leave);
+  }
 }
 
 .beats[data-beat="0"] .beat[data-index="0"] {
@@ -787,37 +824,20 @@ label.setting {
 }
 
 .guide {
-  margin: 4px 10px 8px;
-  font-size: 12px;
+  margin: 4px 4px 8px;
+}
+
+.info-steps {
+  margin: 0 0 12px;
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
 }
 
-.guide summary {
-  cursor: pointer;
-  color: var(--text);
-  font-size: 13px;
-  padding: 6px 0;
-}
-
-.guide summary:focus-visible {
-  outline: 2px solid var(--root);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.guide ol {
-  margin: 4px 0 8px;
-  padding-inline-start: 18px;
-  display: grid;
-  gap: 6px;
-}
-
-.guide p {
-  margin: 0;
-}
-
-.guide code {
+.info-pane code {
   font-size: 11px;
   color: var(--tone);
   user-select: text;
@@ -912,10 +932,32 @@ label.setting {
 }
 
 .segmented {
-  display: inline-flex;
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   padding: 3px;
   border-radius: 11px;
   background: var(--panel);
+}
+
+/* The highlight under the chosen option. It slides when the choice changes. */
+.segmented-thumb {
+  position: absolute;
+  z-index: -1;
+  inset: 3px auto 3px 3px;
+  width: calc((100% - 6px) / var(--count));
+  translate: calc(var(--index) * 100%) 0;
+  border-radius: 8px;
+  background: var(--raised);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .segmented-thumb {
+    transition: translate var(--enter) var(--ease-out);
+  }
 }
 
 .segmented button,
@@ -936,7 +978,11 @@ label.setting {
 
 .segmented button[aria-checked="true"] {
   color: var(--text);
-  background: var(--raised);
+}
+
+.segmented button:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: -2px;
 }
 
 .button {
@@ -1194,6 +1240,293 @@ button:focus-visible {
   overflow: hidden;
 }
 
+/* Tooltips and info panes */
+
+.setting-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.has-tip {
+  text-decoration: underline dotted var(--faint);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.tip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  max-width: 240px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: visible;
+  pointer-events: none;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
+  transform-origin: left bottom;
+  transition-property: opacity, display, overlay;
+  transition-duration: var(--enter);
+  transition-timing-function: var(--ease-out);
+  transition-behavior: allow-discrete;
+}
+
+.tip[data-side="bottom"] {
+  transform-origin: left top;
+}
+
+.tip:not(:popover-open) {
+  opacity: 0;
+  transition-duration: var(--leave);
+  transition-timing-function: var(--ease-leave);
+}
+
+@starting-style {
+  .tip:popover-open {
+    opacity: 0;
+  }
+}
+
+/* Rises out of a slight blur. The next tooltip, opened straight after, appears at once. */
+@media (prefers-reduced-motion: no-preference) {
+  .tip {
+    transition-property: opacity, scale, translate, filter, display, overlay;
+  }
+
+  .tip:not(:popover-open) {
+    scale: 0.96;
+    translate: 0 2px;
+    filter: blur(2px);
+  }
+
+  @starting-style {
+    .tip:popover-open {
+      scale: 0.9;
+      translate: 0 7px;
+      filter: blur(4px);
+    }
+
+    .tip[data-side="bottom"]:popover-open {
+      translate: 0 -7px;
+    }
+  }
+}
+
+.tip[data-instant] {
+  transition-duration: 0ms;
+}
+
+.info-button {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-block: -6px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  cursor: pointer;
+  transition-property: scale, color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.info-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.info-button .info-dot {
+  fill: currentColor;
+}
+
+.info-button.has-text {
+  display: inline-flex;
+  gap: 8px;
+  width: auto;
+  height: 36px;
+  margin: 0;
+  padding-inline: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.info-button.has-text svg {
+  color: var(--muted);
+}
+
+.info-button[aria-expanded="true"] {
+  color: var(--text);
+  background: var(--raised);
+}
+
+@media (hover: hover) {
+  .info-button:hover {
+    color: var(--text);
+    background: var(--raised);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .info-button:active {
+    scale: 0.96;
+  }
+}
+
+.info-button:focus-visible {
+  outline: 2px solid var(--root);
+  outline-offset: 2px;
+}
+
+.info-pane {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
+  outline: none;
+  transition-property: opacity, display, overlay;
+  transition-duration: var(--enter);
+  transition-timing-function: var(--ease-out);
+  transition-behavior: allow-discrete;
+}
+
+.info-pane:not(:popover-open) {
+  opacity: 0;
+  transition-duration: var(--leave);
+  transition-timing-function: var(--ease-leave);
+}
+
+@starting-style {
+  .info-pane:popover-open {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .info-pane {
+    transition-property: opacity, scale, filter, display, overlay;
+  }
+
+  .info-pane:not(:popover-open) {
+    scale: 0.98;
+    filter: blur(2px);
+  }
+
+  @starting-style {
+    .info-pane:popover-open {
+      scale: 0.95;
+      filter: blur(4px);
+    }
+  }
+}
+
+.info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.info-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.info-pane .icon-button {
+  margin: -6px -8px -6px 0;
+}
+
+@media (hover: hover) {
+  .info-pane .icon-button:hover {
+    background: var(--line-strong);
+  }
+}
+
+.info-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.voicing-guide {
+  display: grid;
+  gap: 10px;
+}
+
+.voicing-guide .info-text {
+  margin-bottom: 4px;
+}
+
+.voicing-row {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.voicing-row.is-from {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.voicing-text {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voicing-name {
+  font-size: 11px;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.voicing-symbol {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.voicing-about {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.voicing-row .mini-keys {
+  height: 32px;
+  margin-top: 6px;
+}
+
 /* Next chords */
 
 .stage.has-next {
@@ -1258,6 +1591,20 @@ button:focus-visible {
 /* The first card is the one marked on the keyboard. */
 .next-card.is-first {
   box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+/* A new suggestion replaces the old one with a short blur fade. The card itself stays put. */
+@media (prefers-reduced-motion: no-preference) {
+  .next-card:not(.is-empty) > * {
+    animation: next-swap 120ms var(--ease-out) both;
+  }
+}
+
+@keyframes next-swap {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
 }
 
 .next-card.is-played {

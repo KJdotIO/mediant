@@ -37,6 +37,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
   - `src/recording/`: takes. `take.ts` holds the pure parts (trim, `TakeCursor`, MIDI writer), tested in `take.test.ts`. `recorder.ts` records and plays takes through the tracker; with the metronome on, it restarts the click and counts in one bar, and `trimTake` starts the take on the bar line where you come in. `store.ts` keeps takes in IndexedDB. `frame.ts` draws video frames on a canvas (16:9 and 9:16), and `video.ts` renders the piano offline and encodes MP4 with Mediabunny.
   - Browser tests on localhost share the user's `localStorage` and IndexedDB. Restore any setting a test changes, such as `audioInput`, before finishing.
+  - `fitTitle` in `take.ts` lays a video title out in up to two lines: one line, then two balanced lines, then smaller, then an ellipsis. In 16:9 a two-line title raises the logo block by `lift` so it clears the circle.
   - A take can have a `name`, edited in place in the takes list. Videos show it under the logo, files and the MIDI track use it, and the key and tempo sit in the corner of the staff panel.
   - Test one download in each browser run. A second download started from `page.evaluate` makes Chrome ask about multiple downloads, and Ego Lite hands the tab to the user.
   - To check video frames without an export, import `/src/recording/frame.ts` in the page, draw with `FrameRenderer` on a canvas, and save `toDataURL()`.
@@ -81,6 +82,10 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
 - Display-only text can't be selected (`user-select: none` on `.app`).
 - Pressed buttons scale to `0.96` over `150ms` `ease-out`. Hover styles sit inside `@media (hover: hover)`.
 - Visual direction: Splice INSTRUMENT. Charcoal panels with a large radius, wide uppercase labels (Archivo at `font-stretch: 125%`), orange for the root, cream for other chord tones.
+- Motion tokens live in `:root`: `--enter` (220ms, `--ease-out`) and `--leave` (140ms, `--ease-leave`). Things leave faster than they arrive. Blur fades start at 4px and end at 0, and exits only reach 2px. Patterns come from `interior` (MIT, https://github.com/ddoemonn/interior), rewritten in CSS. Don't add `motion`.
+- A tooltip is one short sentence on hover (after 400 ms) or keyboard focus, and never holds anything you act on. Anything longer, with a picture or with steps, goes in an info pane. `Setting`, `Info` and `Switch` in `src/Tip.tsx` build both. Both use the popover top layer, so the settings column never clips them.
+- Esc closes a tooltip or info pane first, and only then Settings.
+- Ego Lite runs CSS transitions a few frames at a time, so check end states after a second or two, or emulate `prefers-reduced-motion: reduce`.
 - Design skills: the local `better-*` skills and https://github.com/emilkowalski/skills.
 
 ## Plan

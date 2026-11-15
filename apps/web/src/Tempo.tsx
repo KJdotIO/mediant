@@ -8,6 +8,9 @@ interface Props {
   onBpm: (bpm: number) => void;
 }
 
+/** Every light is always there, so a change to the bar fades lights in and out instead of popping them. */
+const MAX_BEATS = 6;
+
 /** Metronome switch, tempo field, tap tempo and a beat light for each beat in the bar. */
 export function Tempo({ bpm, beats, volume, onBpm }: Props) {
   const [running, setRunning] = useState(false);
@@ -82,8 +85,8 @@ export function Tempo({ bpm, beats, volume, onBpm }: Props) {
         Tap
       </button>
       <span ref={lights} className="beats" aria-hidden="true">
-        {Array.from({ length: beats }, (_, i) => (
-          <span key={i} className="beat" data-index={i} />
+        {Array.from({ length: MAX_BEATS }, (_, i) => (
+          <span key={i} className="beat" data-index={i} data-on={i < beats} />
         ))}
       </span>
     </div>

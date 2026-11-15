@@ -43,6 +43,44 @@ export function fileStem(take: Pick<Take, "number" | "name">): string {
 }
 
 /** Plays an event into a tracker. `at` is when it happens, in milliseconds; without it, now. */
+/**
+ * Lays a title out in at most two lines. It stays on one line at full size if it fits, then
+ * wraps onto two balanced lines, then shrinks, and only past the smallest size does the second
+ * line end in an ellipsis. `measure` gives a text's width at a font size.
+ */
+export function fitTitle(
+  title: string,
+  width: number,
+  sizes: { max: number; min: number },
+  measure: (text: string, size: number) => number,
+): { lines: string[]; size: number } {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  const whole = words.join(" ");
+  const fits = (text: string, size: number) => measure(text, size) <= width;
+  const cut = (text: string, size: number) => {
+    let short = text;
+    while (short.length > 1 && !fits(`${short}…`, size)) short = short.slice(0, -1).trimEnd();
+    return `${short}…`;
+  };
+  if (fits(whole, sizes.max)) return { lines: [whole], size: sizes.max };
+  for (let size = sizes.max; size >= sizes.min; size--) {
+    let best: string[] | null = null;
+    let widest = Infinity;
+    for (let k = 1; k < words.length; k++) {
+      const lines = [words.slice(0, k).join(" "), words.slice(k).join(" ")];
+      const w = Math.max(...lines.map((line) => measure(line, size)));
+      if (w <= width && w < widest) [best, widest] = [lines, w];
+    }
+    if (best) return { lines: best, size };
+  }
+  const size = sizes.min;
+  let k = 0;
+  while (k < words.length && fits(words.slice(0, k + 1).join(" "), size)) k++;
+  if (k === 0) return { lines: [cut(whole, size)], size };
+  const rest = words.slice(k).join(" ");
+  return { lines: [words.slice(0, k).join(" "), fits(rest, size) ? rest : cut(rest, size)], size };
+}
+
 export function applyEvent(tracker: NoteTracker, event: NoteEvent, at?: number) {
   switch (event.type) {
     case "on":
