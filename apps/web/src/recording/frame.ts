@@ -3,7 +3,7 @@ import { Renderer } from "vexflow/bravura";
 import { HOLD_GRACE_MS, heldReading, octaveOf, readingTitle, type Sample } from "../logic.ts";
 import { parseKey } from "../settings.ts";
 import { renderStaff, STAFF_SIZE } from "../Staff.tsx";
-import { TakeCursor, type Take } from "./take.ts";
+import { fitTitle, TakeCursor, type Take } from "./take.ts";
 
 export type VideoLayout = "landscape" | "portrait";
 
@@ -17,8 +17,11 @@ interface Box {
 interface LayoutSpec {
   width: number;
   height: number;
-  /** The logo, with the take's name under it. `width` is the room the name has. */
-  mark: { x: number; y: number; align: CanvasTextAlign; width: number };
+  /**
+   * The logo, with the take's name under it. `width` is the room the name has. `lift` raises the
+   * block when the name takes two lines, so the second line clears the circle.
+   */
+  mark: { x: number; y: number; align: CanvasTextAlign; width: number; lift: number };
   circle: { cx: number; cy: number; r: number };
   staff: Box;
   keys: Box;
@@ -28,7 +31,7 @@ export const LAYOUTS: Record<VideoLayout, LayoutSpec> = {
   landscape: {
     width: 1920,
     height: 1080,
-    mark: { x: 96, y: 104, align: "left", width: 430 },
+    mark: { x: 96, y: 104, align: "left", width: 430, lift: 22 },
     circle: { cx: 600, cy: 480, r: 290 },
     staff: { x: 1100, y: 140, w: 724, h: 660 },
     keys: { x: 96, y: 868, w: 1728, h: 140 },
@@ -36,7 +39,7 @@ export const LAYOUTS: Record<VideoLayout, LayoutSpec> = {
   portrait: {
     width: 1080,
     height: 1920,
-    mark: { x: 540, y: 168, align: "center", width: 900 },
+    mark: { x: 540, y: 168, align: "center", width: 900, lift: 0 },
     circle: { cx: 540, cy: 690, r: 350 },
     staff: { x: 120, y: 1150, w: 840, h: 430 },
     keys: { x: 60, y: 1660, w: 960, h: 160 },
@@ -68,6 +71,7 @@ const BLACK = new Set([1, 3, 6, 8, 10]);
 const DIM = 0.42;
 const TITLE_SIZE = 30;
 const TITLE_MIN_SIZE = 22;
+const TITLE_LEADING = 1.25;
 
 const withoutOctave = (name: string) => name.replace(/-?\d+$/, "");
 
@@ -178,22 +182,24 @@ export class FrameRenderer {
     ctx.fillText(text, x, y);
   }
 
-  /** The logo, and under it the take's name. A long name shrinks, then ends in an ellipsis. */
+  /** The logo, and under it the take's name: one line, or two, then smaller, then cut short. */
   private drawMark() {
     const { ctx } = this;
     const { mark } = this.spec;
-    if (this.options.mark) this.text("MEDIANT", mark.x, mark.y, 30, COLOURS.text, { weight: 800, wide: true, align: mark.align });
-    let title = this.take.name?.trim();
-    if (!title) return;
-    let size = TITLE_SIZE;
-    ctx.fontStretch = "normal";
-    const width = () => {
+    const title = this.take.name?.trim();
+    const measure = (text: string, size: number) => {
       ctx.font = `600 ${size}px ${FONT}`;
-      return ctx.measureText(title!).width;
+      ctx.fontStretch = "normal";
+      return ctx.measureText(text).width;
     };
-    size = Math.max(TITLE_MIN_SIZE, Math.min(size, (size * mark.width) / width()));
-    while (title.length > 1 && width() > mark.width) title = `${title.slice(0, -2).trimEnd()}…`;
-    this.text(title, mark.x, this.options.mark ? mark.y + 48 : mark.y, size, COLOURS.tone, { weight: 600, align: mark.align });
+    const fitted = title ? fitTitle(title, mark.width, { max: TITLE_SIZE, min: TITLE_MIN_SIZE }, measure) : null;
+    const y = mark.y - (fitted && fitted.lines.length > 1 ? mark.lift : 0);
+    if (this.options.mark) this.text("MEDIANT", mark.x, y, 30, COLOURS.text, { weight: 800, wide: true, align: mark.align });
+    if (!fitted) return;
+    fitted.lines.forEach((line, i) => {
+      const lineY = (this.options.mark ? y + 48 : y) + i * fitted.size * TITLE_LEADING;
+      this.text(line, mark.x, lineY, fitted.size, COLOURS.tone, { weight: 600, align: mark.align });
+    });
   }
 
   /** The key and tempo, in the corner of the staff panel like the marking at the top of a score. */

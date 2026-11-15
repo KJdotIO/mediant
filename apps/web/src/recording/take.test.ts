@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chordChanges, fileStem, TakeCursor, takeLabel, toMidiFile, trimTake, type TakeEvent } from "./take.ts";
+import { chordChanges, fileStem, fitTitle, TakeCursor, takeLabel, toMidiFile, trimTake, type TakeEvent } from "./take.ts";
 
 const on = (t: number, note: number, velocity = 90): TakeEvent => ({ t, type: "on", note, velocity });
 const off = (t: number, note: number): TakeEvent => ({ t, type: "off", note });
@@ -92,6 +92,34 @@ describe("take names", () => {
     [undefined, "mediant-take-4"],
   ])("names the files of %s %s", (name, stem) => {
     expect(fileStem(name === undefined ? { number: 4 } : { number: 4, name })).toBe(stem);
+  });
+});
+
+describe("fitTitle", () => {
+  const measure = (text: string, size: number) => text.length * size * 0.5;
+  const fit = (title: string) => fitTitle(title, 430, { max: 30, min: 22 }, measure);
+
+  it("keeps a short title on one line at full size", () => {
+    expect(fit("Peace Piece")).toEqual({ lines: ["Peace Piece"], size: 30 });
+  });
+
+  it("wraps a long title onto two even lines before it shrinks", () => {
+    expect(fit("Messing Around Over Two Suggested Chords")).toEqual({
+      lines: ["Messing Around Over", "Two Suggested Chords"],
+      size: 30,
+    });
+  });
+
+  it("shrinks, then ends the second line in an ellipsis", () => {
+    const { lines, size } = fit("A very long title that keeps going well past what two lines could ever hold at any size");
+    expect(size).toBe(22);
+    expect(lines).toHaveLength(2);
+    expect(lines[1]!.endsWith("…")).toBe(true);
+    expect(lines.every((line) => measure(line, 22) <= 430)).toBe(true);
+  });
+
+  it("cuts one long word short", () => {
+    expect(fit("Supercalifragilisticexpialidocious".repeat(2)).lines).toHaveLength(1);
   });
 });
 

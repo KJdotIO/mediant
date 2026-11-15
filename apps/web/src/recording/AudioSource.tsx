@@ -1,5 +1,6 @@
 import { Meter } from "../audio/Meter.tsx";
 import type { Settings } from "../settings.ts";
+import { Info, Switch } from "../Tip.tsx";
 import { useAudioInputs, useInputLevel } from "./audioInput.ts";
 
 interface Props {
@@ -49,25 +50,21 @@ export function AudioSource({ settings, update, active }: Props) {
         </div>
       )}
       {settings.audioInput && (
-        <label className="setting">
-          <span>Show level while playing</span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="switch"
-            checked={settings.monitorInput}
-            onChange={(e) => update({ monitorInput: e.target.checked })}
-          />
-        </label>
+        <Switch
+          label="Show level while playing"
+          tip="Keep the level meter running above the keyboard. Your Mac shows the microphone dot while it runs."
+          checked={settings.monitorInput}
+          onChange={(monitorInput) => update({ monitorInput })}
+        />
       )}
       {!named && (
         <button type="button" className="button show-inputs" onClick={() => void allow()}>
           Show input names
         </button>
       )}
-      <details className="guide">
-        <summary>Record your DAW's sound on a Mac</summary>
-        <ol>
+      <div className="guide">
+        <Info title="Record your DAW's sound on a Mac" text="Record your DAW's sound on a Mac">
+        <ol className="info-steps">
           <li>
             Install BlackHole 2ch. Run <code>brew install --cask blackhole-2ch</code> in Terminal, or use the installer from
             existential.audio. Then restart your Mac.
@@ -78,8 +75,9 @@ export function AudioSource({ settings, update, active }: Props) {
           <li>Here, choose BlackHole 2ch above, and set Sound to Off so you hear only your DAW.</li>
           <li>Play a note in your DAW. The level meter above moves when the sound comes through.</li>
         </ol>
-        <p>Your Mac's volume keys don't change a Multi-Output Device. Use the volume in your DAW.</p>
-      </details>
+        <p className="info-text">Your Mac's volume keys don't change a Multi-Output Device. Use the volume in your DAW.</p>
+        </Info>
+      </div>
     </div>
   );
 }
