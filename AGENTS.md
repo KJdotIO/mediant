@@ -31,6 +31,7 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - `TakeCursor` passes each event's own time to the tracker, so videos group notes the same way every time.
   - `NoteTracker` passes each listener the time the event happened. MIDI events use the message's own `timeStamp`.
   - `src/wakeLock.ts` keeps the screen awake for five minutes after the last note.
+  - `src/Next.tsx` shows the suggestions with no clicks needed. They follow the last chord that sounded unchanged for `SETTLE_MS` (400 ms), so fast playing leaves them as they were. Dots on the keyboard and a dashed shape on the circle show the first one while nothing is held or the chord is still held. A card lights orange when you play it. **Settings** has an on/off switch and **Voicing**.
   - `src/logic.ts` holds the pure UI logic, tested in `src/logic.test.ts`: which chord to hold after an uneven release, note grouping past 8 notes, octave markings on the staff.
   - In dev builds, `window.mediantTracker` exposes the tracker so browser tests can play any notes, and `window.mediantAudio` exposes the audio context.
   - `src/audio/`: one shared `AudioContext` (resumed on the first click or key press), the sampled `Piano`, and a `Metronome` scheduled on the audio clock. Tested in `src/audio/audio.test.ts`.
@@ -60,6 +61,10 @@ npx -y pnpm@11.5.3 --filter @mediant/web build
   - In a key, `keyRoot` in `src/key.ts` spells roots outside the scale: raised for diminished chords (`B#dim7` in C# minor), lowered for borrowed chords (`bII`, `bVI`).
   - Symbols are ASCII (`b`, `#`). `formatSymbol` converts them to ♭ and ♯ for display.
   - Roman numerals use the major scale as the reference in every key, so C in A minor is `bIII`.
+  - `suggest(midiNotes, { key, voicing })` in `src/suggest.ts` returns up to three next chords. Candidates come from the key (or a key guessed from the chord: m7 as ii, 7 as V): diatonic chords, secondary dominants, tritone subs and chords borrowed from the parallel minor.
+  - Each candidate is voiced from the played notes without crossing voices, then ranked by movement plus `FUNCTION_WEIGHT` times its function cost. A voicing must read with `identify` as the chord it was built for.
+  - Voicing styles: `closest` (inversions allowed, the bass can step to the third), `root` (root in the bass) and `rich` (root plus a rootless A or B form, with b9 and b13 on dominants that resolve to a minor chord).
+  - Fixtures are in `test/suggest.test.ts`. The properties test checks that suggestions move the same way in all 12 keys.
 
 ## Tests
 

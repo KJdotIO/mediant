@@ -1,6 +1,6 @@
-import { identify, parseNote, type Reading } from "@mediant/theory";
+import { identify, parseNote, suggest, type Reading } from "@mediant/theory";
 import { describe, expect, it } from "vitest";
-import { heldReading, noteGroups, octaveOf, ottava, RELEASE_WINDOW, type Sample } from "./logic.ts";
+import { heldReading, noteGroups, octaveOf, ottava, playedSuggestion, reasonText, RELEASE_WINDOW, type Sample } from "./logic.ts";
 
 const read = (notes: string): Reading => identify(notes.split(" ").map(parseNote))!;
 const symbol = (reading: Reading | null) => (reading?.kind === "chord" ? reading.symbol : reading?.kind);
@@ -60,5 +60,19 @@ describe("octaveOf", () => {
     expect(octaveOf(60, "C3")).toBe(3);
     expect(octaveOf(21, "C4")).toBe(0);
     expect(octaveOf(108, "C3")).toBe(7);
+  });
+});
+
+describe("suggestions", () => {
+  it("formats only the chord name in a reason", () => {
+    expect(reasonText({ kind: "tritone", of: "Db7" })).toBe("Tritone sub for D♭7");
+    expect(reasonText({ kind: "secondary", of: "bVI" })).toBe("V of ♭VI");
+  });
+
+  it("knows which suggestion you play, in any voicing", () => {
+    const { suggestions } = suggest("D2 F3 A3 C4".split(" ").map(parseNote), { key: { tonic: "C", mode: "major" } })!;
+    expect(suggestions[0]!.symbol).toBe("G7");
+    expect(playedSuggestion(read("G3 B3 D4 F4"), suggestions)).toBe(0);
+    expect(playedSuggestion(read("G3 B3 D4"), suggestions)).toBe(-1);
   });
 });

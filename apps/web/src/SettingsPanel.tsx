@@ -107,6 +107,20 @@ export function SettingsPanel({ open, onClose, settings, update, midiInputs }: P
         </div>
       </section>
 
+      <section className="settings-group" aria-labelledby="settings-suggestions">
+        <h3 id="settings-suggestions" className="settings-group-title">Suggestions</h3>
+        <Switch label="Suggest next chords" checked={settings.suggestions} onChange={(suggestions) => update({ suggestions })} />
+        <div className="setting">
+          <span>Voicing</span>
+          <Segmented
+            label="Voicing"
+            value={settings.voicing}
+            options={[["closest", "Closest"], ["root", "Root"], ["rich", "Rich"]]}
+            onChange={(voicing) => update({ voicing })}
+          />
+        </div>
+      </section>
+
       <section className="settings-group" aria-labelledby="settings-sound">
         <h3 id="settings-sound" className="settings-group-title">Sound</h3>
         <Slider label="Piano volume" value={settings.volume} onChange={(volume) => update({ volume })} />

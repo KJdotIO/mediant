@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { identify, parseNote, pitchClass } from "../src/index.ts";
+import { identify, parseNote, pitchClass, suggest } from "../src/index.ts";
 
 /** A reading without its pitch: the kind, and for a chord its quality and where the root sits above the bass. */
 function shape(notes: readonly number[]): string {
@@ -47,5 +47,25 @@ describe("every set of notes", () => {
         expect(reading.notes.map((n) => parseNote(n.name))).toEqual([...notes].sort((a, b) => a - b));
       }),
     );
+  });
+});
+
+describe("suggestions", () => {
+  const voicings = [
+    "D2 F3 A3 C4",
+    "G2 F3 B3 D4",
+    "C4 E4 G4",
+    "D2 F3 A3 C4 E4",
+    "A2 G3 C4 E4",
+    "B2 A3 D4 F4",
+    "C#3 E3 G3 Bb3",
+  ].map((v) => v.split(" ").map(parseNote));
+
+  it("move the same way in all twelve keys", () => {
+    for (const notes of voicings) {
+      const shapes = (shift: number) =>
+        suggest(notes.map((n) => n + shift))!.suggestions.map((s) => `${s.quality} ${s.notes.map((n) => n.midi - shift).join(",")}`);
+      for (let shift = 1; shift < 12; shift++) expect(shapes(shift), notes.join(" ")).toEqual(shapes(0));
+    }
   });
 });

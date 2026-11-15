@@ -38,10 +38,12 @@ interface Props {
   pressed?: ReadonlySet<number> | undefined;
   /** Notes the pedal still holds from an earlier chord. They sound, but aren't part of the name. */
   ringing?: ReadonlySet<number> | undefined;
+  /** Keys of the first suggestion, marked with a dot: true for its root. */
+  next?: ReadonlyMap<number, boolean> | undefined;
 }
 
 /** A full 88-key keyboard, A0 to C8, so nothing moves when you play outside a small range. */
-export function Keyboard({ notes, rootPc, labels, middleC, dim, pressed, ringing }: Props) {
+export function Keyboard({ notes, rootPc, labels, middleC, dim, pressed, ringing, next }: Props) {
   const byMidi = new Map(notes.map((n) => [n.midi, n]));
 
   const renderKey = ({ midi, black, x }: Key) => {
@@ -59,6 +61,14 @@ export function Keyboard({ notes, rootPc, labels, middleC, dim, pressed, ringing
           height={black ? BLACK_HEIGHT : WHITE_HEIGHT}
           rx={black ? 3 : 4}
         />
+        {next?.has(midi) && (
+          <circle
+            className={`key-next${next.get(midi) ? " is-root" : ""}`}
+            cx={x + (black ? BLACK_WIDTH : WHITE_WIDTH) / 2}
+            cy={TOP + (black ? BLACK_HEIGHT - 11 : WHITE_HEIGHT - 14)}
+            r={4.5}
+          />
+        )}
         {label && (
           <text className="key-label" x={x + (black ? BLACK_WIDTH : WHITE_WIDTH) / 2} y={TOP - (black ? 20 : 7)} textAnchor="middle">
             {formatSymbol(label)}
